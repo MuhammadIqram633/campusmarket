@@ -1,13 +1,68 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>campusmarket</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusMarket - Student Textbook Marketplace</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="container">
+      <a class="logo" href="index.html">CampusMarket</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="login.html">Login</a></li>
+          <li><a href="register.html">Register</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Buy and sell used textbooks on campus</h1>
+      <p>Find course books and lab equipment from other students.</p>
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search by course code, e.g. CS-201">
+        <button class="btn" id="searchBtn">Search</button>
+      </div>
+    </section>
+
+    <h2 class="section-title">Latest listings</h2>
+    <!-- These 3 cards are sample data. Later, JavaScript will fill this from the database. -->
+    <section class="listing-grid" id="listingGrid">
+      <article class="card">
+        <div class="card-img">Photo</div>
+        <div class="card-body">
+          <h3>Data Structures Textbook</h3>
+          <p class="course">CS-201</p>
+          <span class="tag">Good</span>
+          <p class="price">Rs. 1200</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-img">Photo</div>
+        <div class="card-body">
+          <h3>Calculus Book</h3>
+          <p class="course">MATH-101</p>
+          <span class="tag">Like New</span>
+          <p class="price">Rs. 900</p>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-img">Photo</div>
+        <div class="card-body">
+          <h3>Digital Logic Lab Kit</h3>
+          <p class="course">EE-110</p>
+          <span class="tag">Fair</span>
+          <p class="price">Rs. 1500</p>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer class="footer">CampusMarket - Zynvex Virtual Internship Project</footer>
+</body>
 </html>
