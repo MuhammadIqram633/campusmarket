@@ -1,0 +1,124 @@
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let currentUser = null;
+let thumbBlob = null;
+
+(async () => {
+  const { data } = await supabaseClient.auth.getSession();
+  if (!data.session) {
+    window.location.href = 'login.html';
+    return;
+  }
+  currentUser = data.session.user;
+})();
+
+// PDF ka pehla page tasveer banata hai, image ho to wahi use hoti hai
+async function makeThumbnail(file) {
+  if (file.type === 'application/pdf') {
+    const buffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+    const page = await pdf.getPage(1);
+    const base = page.getViewport({ scale: 1 });
+    const viewport = page.getViewport({ scale: 600 / base.width });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+  }
+  return file;
+}
+
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+  const message = document.getElementById('message');
+  const preview = document.getElementById('preview');
+  const file = e.target.files[0];
+  thumbBlob = null;
+  preview.style.display = 'none';
+  if (!file) return;
+
+  const isPdf = file.type === 'application/pdf';
+  const isImage = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+  if (!isPdf && !isImage) {
+    message.textContent = 'Only PDF, JPG, PNG or WebP files are allowed.';
+    e.target.value = '';
+    return;
+  }
+  const maxMB = isPdf ? 20 : 2;
+  if (file.size > maxMB * 1024 * 1024) {
+    message.textContent = `File is too large (maximum ${maxMB} MB).`;
+    e.target.value = '';
+    return;
+  }
+
+  message.textContent = 'Creating preview...';
+  try {
+    thumbBlob = await makeThumbnail(file);
+    preview.src = URL.createObjectURL(thumbBlob);
+    preview.style.display = 'block';
+    message.textContent = '';
+  } catch (err) {
+    message.textContent = 'Could not read this file.';
+  }
+});
+
+document.getElementById('listingForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const message = document.getElementById('message');
+
+  if (!currentUser) {
+    message.textContent = 'Please login first.';
+    return;
+  }
+
+  const exchangeOnly = document.getElementById('exchangeOnly').checked;
+  const priceValue = document.getElementById('price').value;
+
+  const listing = {
+    seller_id: currentUser.id,
+    title: document.getElementById('title').value.trim(),
+    course_code: document.getElementById('courseCode').value.trim().toUpperCase(),
+    category: document.getElementById('category').value,
+    condition: document.getElementById('condition').value,
+    price: exchangeOnly || priceValue === '' ? null : Number(priceValue),
+    exchange_only: exchangeOnly,
+    description: document.getElementById('description').value.trim()
+  };
+
+  message.textContent = 'Saving...';
+
+  const { data: saved, error } = await supabaseClient
+    .from('listings').insert(listing).select().single();
+  if (error) {
+    message.textContent = error.message;
+    return;
+  }
+
+  if (thumbBlob) {
+    const ext = thumbBlob.type.split('/')[1].replace('jpeg', 'jpg');
+    const path = `${currentUser.id}/${saved.id}.${ext}`;
+
+    const { error: uploadError } = await supabaseClient.storage
+      .from('listing-images')
+      .upload(path, thumbBlob, { contentType: thumbBlob.type });
+    if (uploadError) {
+      message.textContent = 'Listing saved, but image upload failed: ' + uploadError.message;
+      return;
+    }
+
+    const { data: urlData } = supabaseClient.storage.from('listing-images').getPublicUrl(path);
+    const { error: imageError } = await supabaseClient
+      .from('listing_images')
+      .insert({ listing_id: saved.id, image_url: urlData.publicUrl });
+    if (imageError) {
+      message.textContent = 'Listing saved, but image record failed: ' + imageError.message;
+      return;
+    }
+  }
+
+  message.textContent = 'Listing posted!';
+  document.getElementById('listingForm').reset();
+  document.getElementById('preview').style.display = 'none';
+  thumbBlob = null;
+});
