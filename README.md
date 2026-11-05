@@ -1,10 +1,12 @@
 # CampusMarket
 
-A student-to-student marketplace for buying, selling and exchanging used course textbooks and lab equipment.
+A student-to-student marketplace for buying, selling and exchanging used course textbooks, lecture notes and lab equipment.
 
 **Zynvex Solutions Virtual Internship, Batch 5**
 **Project:** WEB-01 CampusMarket: Student-to-Student Used Textbook Marketplace
 **Intern:** Muhammad Iqram | **Internship ID:** ZYNVEX-CERT-2078 | **Track:** Web Development
+
+**Live site:** https://muhammadiqram633.github.io/campusmarket/
 
 ## Problem
 
@@ -13,33 +15,26 @@ Students struggle to find affordable used textbooks and lab equipment, and there
 ## Tech stack
 
 - **Frontend:** HTML, CSS and JavaScript
-- **Backend:** Supabase (PostgreSQL database, authentication, and later image storage)
-- **Hosting:** Vercel (free tier), planned for later modules
+- **Backend:** Supabase (PostgreSQL database, authentication and file storage)
+- **PDF previews:** pdf.js (runs in the browser)
+- **Hosting:** GitHub Pages (free)
 
 ## Project plan
 
 | Module | Dates | Focus | Status |
 |---|---|---|---|
 | Module 1 | Oct 26 - Nov 01 | Setup, database design, authentication | Completed |
-| Module 2 | Nov 02 - Nov 08 | Listings, image upload, buyer-seller requests | Planned |
+| Module 2 | Nov 02 - Nov 08 | Listings, previews, buyer-seller requests | In progress |
 | Module 3 | Nov 09 - Nov 15 | Search, filters, safety reporting, polish | Planned |
 | Module 4 | Nov 16 - Nov 22 | Testing, deployment, documentation | Planned |
 
 ## Module 1: what was completed
 
 1. **Project setup:** project folder with HTML, CSS and JavaScript files, and a GitHub repository with regular commits.
-2. **Base user interface:** three responsive pages (home, login, register) that share one stylesheet and one navigation bar.
+2. **Base user interface:** responsive pages (home, login, register) that share one stylesheet and one navigation bar.
 3. **Database design:** five related tables created in Supabase (see below).
 4. **Database security:** Row Level Security enabled on every table, with rules that limit what each user can do.
 5. **Authentication:** user registration and login using Supabase Auth, with the user profile saved to the database.
-
-### Pages
-
-| Page | File | Description |
-|---|---|---|
-| Home | `index.html` | Search bar and listing cards (sample data for now, real listings come in Module 2) |
-| Register | `register.html` | Create an account with full name, department, email and password |
-| Login | `login.html` | Log in with email and password |
 
 ### Database design
 
@@ -48,8 +43,8 @@ The database is relational (PostgreSQL). Tables are connected with foreign keys,
 | Table | Main fields | Purpose |
 |---|---|---|
 | `profiles` | id, full_name, department, role, created_at | User details linked to the login account. Role is `student` or `admin` |
-| `listings` | id, seller_id, title, course_code, category, condition, price, exchange_only, description, status | Textbooks and lab equipment posted by students |
-| `listing_images` | id, listing_id, image_url | Photos of each listing |
+| `listings` | id, seller_id, title, course_code, category, condition, price, exchange_only, description, status, file_path | Textbooks, notes and lab equipment posted by students |
+| `listing_images` | id, listing_id, image_url | Preview images of each listing |
 | `requests` | id, listing_id, buyer_id, message, meeting_note, status | Buyer-seller requests (pending, accepted, declined, completed) |
 | `reports` | id, listing_id, reporter_id, reason, details, status | Safety reports reviewed by an admin |
 
@@ -82,23 +77,51 @@ The complete SQL is in [`database/schema.sql`](database/schema.sql).
 
 The Supabase project URL and the publishable (anon) key are used in `js/supabaseClient.js`. The publishable key is designed to be public. Data is protected by Row Level Security, and no secret keys are stored in this repository.
 
+## Module 2: listings and previews (in progress)
+
+Completed so far:
+
+- **Sell page:** logged-in users can post a listing (title, course code, category, condition, price or exchange-only, description) with form validation. A visitor who is not logged in is sent to the login page.
+- **Live listings:** the home page loads listings from the database and shows them as cards.
+- **Automatic PDF previews:** when a seller uploads a PDF, the first 3 pages are converted to images in the browser (pdf.js) and used as the public preview. Photos (JPG, PNG, WebP) can also be uploaded.
+- **Private file storage:** the full PDF is saved in a private Supabase Storage bucket. Only the seller, or a buyer whose request was accepted, can read it. This is enforced by storage policies in the database, not only by the interface.
+- **Listing detail page:** clicking a card opens a page with the preview pages, description, condition, price and seller details.
+- **Navbar login state:** the navigation bar shows Logout when the user is logged in, and Login and Register when logged out.
+
+Still to do in this module:
+
+- Buyer request form and request log
+- Seller Accept/Decline, and file download for accepted buyers
+- My Listings page (edit, delete, mark as sold)
+
+### How file sharing works (no payment gateway)
+
+The platform does not handle money. A buyer sends a request, and the buyer and seller agree on the payment between themselves. When the seller accepts the request, the buyer gets access to the full file. Physical books are exchanged through a meeting request.
+
 ## Project structure
 
 ```
 campusmarket/
-  index.html
+  index.html               home page with live listings
+  listing.html             listing detail page
+  create-listing.html      sell page
   login.html
   register.html
   css/
     style.css
   js/
-    supabaseClient.js    connects the website to Supabase
-    register.js          registration logic
-    login.js             login logic
+    supabaseClient.js      connects the website to Supabase
+    auth.js                login check for protected pages
+    nav.js                 navigation bar (login state, logout)
+    register.js            registration logic
+    login.js               login logic
+    home.js                loads and shows listings
+    listing.js             listing detail page
+    create-listing.js      sell form, PDF previews and uploads
   database/
-    schema.sql           tables, validation rules and security policies
+    schema.sql             tables, validation rules, storage and security policies
   images/
-  screenshots/           screenshots used in this README
+  screenshots/             screenshots used in this README
   README.md
 ```
 
@@ -106,7 +129,7 @@ campusmarket/
 
 1. Clone the repository: `git clone https://github.com/MuhammadIqram633/campusmarket.git`
 2. Open the folder in VS Code.
-3. Start it with the Live Server extension (right-click `index.html`, then "Open with Live Server"), or open `index.html` in a browser.
+3. Start it with the Live Server extension (right-click `index.html`, then "Open with Live Server").
 
 ## Screenshots
 
@@ -122,12 +145,21 @@ campusmarket/
 ### Database tables in Supabase
 ![Supabase tables](screenshots/supabase-tables.png)
 
-### Registered user and profile saved in the database
-![Supabase user and profile](screenshots/supabase-users-profiles.png)
+### Registered user in Supabase Authentication
+![Supabase user](screenshots/supabase-users-profiles.png)
 
-## Next: Module 2 (Nov 02 - Nov 08)
+<!-- Module 2 screenshots: remove the comment markers once these files are in the screenshots folder.
 
-- Create, view, edit and delete listings
-- Image upload with Supabase Storage (JPG, PNG and WebP, size limit)
-- "My Listings" page for sellers
-- Buyer-seller request system with request log
+### Home page with live listings
+![Home listings](screenshots/home-listings.png)
+
+### Listing detail page
+![Listing detail](screenshots/listing-detail.png)
+
+### Sell page
+![Sell page](screenshots/sell-page.png)
+
+### Storage buckets in Supabase
+![Supabase storage](screenshots/supabase-storage.png)
+
+-->

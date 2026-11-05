@@ -117,3 +117,47 @@ create policy "admins view reports" on reports
   for select using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 create policy "admins update reports" on reports
   for update using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+
+-- ========== MODULE 2 ADDITIONS ==========
+-- These statements were already run in the Supabase SQL Editor.
+-- They are listed here so the repository documents the complete database.
+
+-- Path of the full PDF in private storage
+alter table listings add column file_path text;
+
+-- Public bucket for preview images, private bucket for full files
+insert into storage.buckets (id, name, public)
+values ('listing-images', 'listing-images', true) on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+values ('listing-files', 'listing-files', false) on conflict (id) do nothing;
+
+-- Preview images: users can upload and delete only in their own folder
+create policy "users upload to own folder" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'listing-images' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "users delete own files" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'listing-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Full files: private. Only the seller, or a buyer whose request was accepted, can read
+create policy "sellers upload own files" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'listing-files' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "sellers delete own files" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'listing-files' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "seller or approved buyer can read file" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'listing-files'
+    and (
+      (storage.foldername(name))[1] = auth.uid()::text
+      or exists (
+        select 1 from requests r join listings l on l.id = r.listing_id
+        where r.buyer_id = auth.uid()
+          and r.status in ('accepted','completed')
+          and l.file_path = name
+      )
+    )
+  );
