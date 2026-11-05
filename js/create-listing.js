@@ -2,16 +2,11 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 let currentUser = null;
-let thumbBlob = null;
+let thumbBlob = null;     // card par dikhne wali choti tasveer
+let selectedFile = null;  // asli file (PDF ho to private storage mein jayegi)
 
-(async () => {
-  const { data } = await supabaseClient.auth.getSession();
-  if (!data.session) {
-    window.location.href = 'login.html';
-    return;
-  }
-  currentUser = data.session.user;
-})();
+// Login check HTML mein pehle hi shuru ho chuka hai
+window.loginCheck.then(user => { currentUser = user; });
 
 // PDF ka pehla page tasveer banata hai, image ho to wahi use hoti hai
 async function makeThumbnail(file) {
@@ -35,6 +30,7 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
   const preview = document.getElementById('preview');
   const file = e.target.files[0];
   thumbBlob = null;
+  selectedFile = null;
   preview.style.display = 'none';
   if (!file) return;
 
@@ -52,6 +48,7 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
     return;
   }
 
+  selectedFile = file;
   message.textContent = 'Creating preview...';
   try {
     thumbBlob = await makeThumbnail(file);
@@ -88,6 +85,7 @@ document.getElementById('listingForm').addEventListener('submit', async (e) => {
 
   message.textContent = 'Saving...';
 
+  // 1. Listing ki row banao
   const { data: saved, error } = await supabaseClient
     .from('listings').insert(listing).select().single();
   if (error) {
@@ -95,6 +93,7 @@ document.getElementById('listingForm').addEventListener('submit', async (e) => {
     return;
   }
 
+  // 2. Thumbnail public storage mein
   if (thumbBlob) {
     const ext = thumbBlob.type.split('/')[1].replace('jpeg', 'jpg');
     const path = `${currentUser.id}/${saved.id}.${ext}`;
@@ -117,8 +116,28 @@ document.getElementById('listingForm').addEventListener('submit', async (e) => {
     }
   }
 
-  message.textContent = 'Listing posted!';
+  // 3. Asli PDF private storage mein (sirf seller aur approved buyer padh sakega)
+  if (selectedFile && selectedFile.type === 'application/pdf') {
+    const filePath = `${currentUser.id}/${saved.id}.pdf`;
+    const { error: fileError } = await supabaseClient.storage
+      .from('listing-files')
+      .upload(filePath, selectedFile, { contentType: 'application/pdf' });
+    if (fileError) {
+      message.textContent = 'Listing saved, but file upload failed: ' + fileError.message;
+      return;
+    }
+    const { error: pathError } = await supabaseClient
+      .from('listings').update({ file_path: filePath }).eq('id', saved.id);
+    if (pathError) {
+      message.textContent = 'Listing saved, but file link failed: ' + pathError.message;
+      return;
+    }
+  }
+
+  message.textContent = 'Listing posted! Redirecting to home...';
   document.getElementById('listingForm').reset();
   document.getElementById('preview').style.display = 'none';
   thumbBlob = null;
+  selectedFile = null;
+  setTimeout(() => { window.location.href = 'index.html'; }, 1500);
 });
