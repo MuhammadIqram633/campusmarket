@@ -1,6 +1,5 @@
 const conditionLabels = { new: 'New', like_new: 'Like new', good: 'Good', fair: 'Fair' };
 
-// User ka likha hua text safe banane ke liye
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text ?? '';
@@ -13,9 +12,10 @@ async function loadListings() {
 
   const { data, error } = await supabaseClient
     .from('listings')
-    .select('*, listing_images(image_url)')
+    .select('*, listing_images(image_url, created_at)')
     .eq('status', 'available')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .order('created_at', { referencedTable: 'listing_images', ascending: true });
 
   if (error) {
     emptyMsg.textContent = 'Could not load listings: ' + error.message;
@@ -32,15 +32,17 @@ async function loadListings() {
       : 'No photo';
     const price = item.exchange_only ? 'Exchange only' : `Rs. ${item.price ?? '-'}`;
     return `
-      <article class="card">
-        <div class="card-img">${image}</div>
-        <div class="card-body">
-          <h3>${escapeHtml(item.title)}</h3>
-          <p class="course">${escapeHtml(item.course_code)}</p>
-          <span class="tag">${conditionLabels[item.condition]}</span>
-          <p class="price">${price}</p>
-        </div>
-      </article>`;
+      <a class="card-link" href="listing.html?id=${item.id}">
+        <article class="card">
+          <div class="card-img">${image}</div>
+          <div class="card-body">
+            <h3>${escapeHtml(item.title)}</h3>
+            <p class="course">${escapeHtml(item.course_code)}</p>
+            <span class="tag">${conditionLabels[item.condition]}</span>
+            <p class="price">${price}</p>
+          </div>
+        </article>
+      </a>`;
   }).join('');
 }
 

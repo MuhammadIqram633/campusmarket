@@ -2,34 +2,38 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 let currentUser = null;
-let thumbBlob = null;     // card par dikhne wali choti tasveer
+let previewBlobs = [];    // preview tasveerein (PDF ke pehle 3 pages, ya ek photo)
 let selectedFile = null;  // asli file (PDF ho to private storage mein jayegi)
 
-// Login check HTML mein pehle hi shuru ho chuka hai
 window.loginCheck.then(user => { currentUser = user; });
 
-// PDF ka pehla page tasveer banata hai, image ho to wahi use hoti hai
-async function makeThumbnail(file) {
-  if (file.type === 'application/pdf') {
-    const buffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-    const page = await pdf.getPage(1);
+// PDF ke pehle 3 pages tasveer banata hai, photo ho to wahi use hoti hai
+async function makePreviews(file) {
+  if (file.type !== 'application/pdf') return [file];
+
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  const pageCount = Math.min(3, pdf.numPages);
+  const blobs = [];
+
+  for (let n = 1; n <= pageCount; n++) {
+    const page = await pdf.getPage(n);
     const base = page.getViewport({ scale: 1 });
     const viewport = page.getViewport({ scale: 600 / base.width });
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+    blobs.push(await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8)));
   }
-  return file;
+  return blobs;
 }
 
 document.getElementById('fileInput').addEventListener('change', async (e) => {
   const message = document.getElementById('message');
   const preview = document.getElementById('preview');
   const file = e.target.files[0];
-  thumbBlob = null;
+  previewBlobs = [];
   selectedFile = null;
   preview.style.display = 'none';
   if (!file) return;
@@ -51,10 +55,10 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
   selectedFile = file;
   message.textContent = 'Creating preview...';
   try {
-    thumbBlob = await makeThumbnail(file);
-    preview.src = URL.createObjectURL(thumbBlob);
+    previewBlobs = await makePreviews(file);
+    preview.src = URL.createObjectURL(previewBlobs[0]);
     preview.style.display = 'block';
-    message.textContent = '';
+    message.textContent = `Preview ready (${previewBlobs.length} page${previewBlobs.length > 1 ? 's' : ''}).`;
   } catch (err) {
     message.textContent = 'Could not read this file.';
   }
@@ -93,14 +97,15 @@ document.getElementById('listingForm').addEventListener('submit', async (e) => {
     return;
   }
 
-  // 2. Thumbnail public storage mein
-  if (thumbBlob) {
-    const ext = thumbBlob.type.split('/')[1].replace('jpeg', 'jpg');
-    const path = `${currentUser.id}/${saved.id}.${ext}`;
+  // 2. Preview tasveerein public storage mein (ek ek karke, taake tarteeb sahi rahe)
+  for (let i = 0; i < previewBlobs.length; i++) {
+    const blob = previewBlobs[i];
+    const ext = blob.type.split('/')[1].replace('jpeg', 'jpg');
+    const path = `${currentUser.id}/${saved.id}-${i + 1}.${ext}`;
 
     const { error: uploadError } = await supabaseClient.storage
       .from('listing-images')
-      .upload(path, thumbBlob, { contentType: thumbBlob.type });
+      .upload(path, blob, { contentType: blob.type });
     if (uploadError) {
       message.textContent = 'Listing saved, but image upload failed: ' + uploadError.message;
       return;
@@ -116,7 +121,7 @@ document.getElementById('listingForm').addEventListener('submit', async (e) => {
     }
   }
 
-  // 3. Asli PDF private storage mein (sirf seller aur approved buyer padh sakega)
+  // 3. Asli PDF private storage mein
   if (selectedFile && selectedFile.type === 'application/pdf') {
     const filePath = `${currentUser.id}/${saved.id}.pdf`;
     const { error: fileError } = await supabaseClient.storage
@@ -137,7 +142,7 @@ document.getElementById('listingForm').addEventListener('submit', async (e) => {
   message.textContent = 'Listing posted! Redirecting to home...';
   document.getElementById('listingForm').reset();
   document.getElementById('preview').style.display = 'none';
-  thumbBlob = null;
+  previewBlobs = [];
   selectedFile = null;
   setTimeout(() => { window.location.href = 'index.html'; }, 1500);
 });

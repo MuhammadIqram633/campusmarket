@@ -91,3 +91,16 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); b
 input[type="checkbox"] { width: auto; margin-right: 6px; }
 textarea { resize: vertical; }
 .card-img img { width: 100%; height: 100%; object-fit: cover; }
+.card-link { color: inherit; text-decoration: none; display: block; }
+.card-link:hover { text-decoration: none; }
+.card-link:hover .card { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform: translateY(-2px); }
+.card { transition: box-shadow 0.15s, transform 0.15s; }
+
+.back-link { margin: 20px 0 8px; }
+#detail { padding-bottom: 40px; }
+#detail h1 { font-size: 26px; margin-bottom: 4px; }
+.price.big { font-size: 22px; }
+.gallery { display: flex; flex-wrap: wrap; gap: 12px; }
+.gallery img { width: 220px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+.note { margin-top: 8px; font-size: 14px; color: var(--muted); }
+.muted { color: var(--muted); }
