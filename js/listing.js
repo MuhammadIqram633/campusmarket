@@ -7,6 +7,84 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Buyer ke liye request ka hissa (login, apni listing, pehle se request, sab check hote hain)
+async function renderRequestSection(listing) {
+  const section = document.getElementById('requestSection');
+  const { data } = await supabaseClient.auth.getSession();
+  const user = data.session ? data.session.user : null;
+
+  if (!user) {
+    section.innerHTML = '<p class="muted">Please <a href="login.html">login</a> to send a request to the seller.</p>';
+    return;
+  }
+  if (user.id === listing.seller_id) {
+    section.innerHTML = '<p class="muted">This is your listing.</p>';
+    return;
+  }
+  if (listing.status !== 'available') {
+    section.innerHTML = '<p class="muted">This item is no longer available.</p>';
+    return;
+  }
+
+  // Kya is buyer ki pehle se koi request hai?
+  const { data: existing } = await supabaseClient
+    .from('requests')
+    .select('status')
+    .eq('listing_id', listing.id)
+    .eq('buyer_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    const status = existing[0].status;
+    if (status === 'pending') {
+      section.innerHTML = '<p class="note">Your request has been sent. Waiting for the seller to reply.</p>';
+      return;
+    }
+    if (status === 'accepted' || status === 'completed') {
+      section.innerHTML = '<p class="note">The seller accepted your request.</p>';
+      return;
+    }
+    // declined ho to dobara request bhej sakta hai
+  }
+
+  section.innerHTML = `
+    <div class="request-box">
+      <h3>Send a request</h3>
+      <textarea id="reqMessage" rows="3" placeholder="Write a short message to the seller"></textarea>
+      <input type="text" id="reqMeeting" placeholder="Suggested meeting place or time (optional)">
+      <button class="btn" id="reqBtn">Send request</button>
+      <p class="message" id="reqMsg"></p>
+    </div>`;
+
+  document.getElementById('reqBtn').addEventListener('click', async () => {
+    const msg = document.getElementById('reqMsg');
+    const message = document.getElementById('reqMessage').value.trim();
+    const meeting = document.getElementById('reqMeeting').value.trim();
+
+    if (!message) {
+      msg.textContent = 'Please write a short message.';
+      return;
+    }
+
+    msg.textContent = 'Sending...';
+    const { error } = await supabaseClient.from('requests').insert({
+      listing_id: listing.id,
+      buyer_id: user.id,
+      message: message,
+      meeting_note: meeting
+    });
+
+    if (error) {
+      msg.textContent = error.code === '23505'
+        ? 'You already have a pending request for this item.'
+        : error.message;
+      return;
+    }
+    section.innerHTML = '<p class="note">Your request has been sent. Waiting for the seller to reply.</p>';
+  });
+}
+
 async function loadListing() {
   const box = document.getElementById('detail');
   const id = new URLSearchParams(window.location.search).get('id');
@@ -62,7 +140,11 @@ async function loadListing() {
 
     <h3 class="section-title">Seller</h3>
     <p>${escapeHtml(sellerName)}${sellerDept}</p>
+
+    <div id="requestSection"></div>
   `;
+
+  renderRequestSection(data);
 }
 
 loadListing();
