@@ -112,3 +112,6 @@ textarea { resize: vertical; }
 .btn-small { padding: 6px 12px; font-size: 14px; }
 .btn-danger { background: #b91c1c; }
 .btn-danger:hover { background: #991b1b; }
+.req-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; }
+.req-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 4px; }
+.req-actions { display: flex; gap: 8px; margin-top: 8px; }

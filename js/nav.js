@@ -17,6 +17,7 @@
 
   if (loggedIn) {
     links.push({ text: 'My Listings', href: 'my-listings.html' });
+    links.push({ text: 'Requests', href: 'requests.html' });
     links.push({ text: 'Logout', href: '#', logout: true });
   } else {
     links.push({ text: 'Login', href: 'login.html' });
