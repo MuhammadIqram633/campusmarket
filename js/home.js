@@ -6,9 +6,37 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Kaun login hai, aur kin listings ki request accept ho chuki hai
+async function getUserInfo() {
+  const { data: s } = await supabaseClient.auth.getSession();
+  if (!s.session) return { userId: null, accepted: new Set() };
+
+  const userId = s.session.user.id;
+  const { data } = await supabaseClient
+    .from('requests')
+    .select('listing_id')
+    .eq('buyer_id', userId)
+    .in('status', ['accepted', 'completed']);
+
+  return { userId, accepted: new Set((data || []).map(r => r.listing_id)) };
+}
+
+function actionHtml(item, user) {
+  if (!item.file_path) return '';
+  if (!user.userId) {
+    return '<a class="btn btn-small" href="login.html">Login to get notes</a>';
+  }
+  if (item.seller_id === user.userId || user.accepted.has(item.id)) {
+    return `<button class="btn btn-small dl-btn" data-path="${item.file_path}">Download notes</button>`;
+  }
+  return `<a class="btn btn-small" href="listing.html?id=${item.id}">Get notes</a>`;
+}
+
 async function loadListings() {
   const grid = document.getElementById('listingGrid');
   const emptyMsg = document.getElementById('emptyMsg');
+
+  const user = await getUserInfo();
 
   const { data, error } = await supabaseClient
     .from('listings')
@@ -31,9 +59,10 @@ async function loadListings() {
       ? `<img src="${item.listing_images[0].image_url}" alt="">`
       : 'No photo';
     const price = item.exchange_only ? 'Exchange only' : `Rs. ${item.price ?? '-'}`;
+    const action = actionHtml(item, user);
     return `
-      <a class="card-link" href="listing.html?id=${item.id}">
-        <article class="card">
+      <article class="card">
+        <a class="card-link" href="listing.html?id=${item.id}">
           <div class="card-img">${image}</div>
           <div class="card-body">
             <h3>${escapeHtml(item.title)}</h3>
@@ -41,9 +70,33 @@ async function loadListings() {
             <span class="tag">${conditionLabels[item.condition]}</span>
             <p class="price">${price}</p>
           </div>
-        </article>
-      </a>`;
+        </a>
+        ${action ? `<div class="card-footer">${action}</div>` : ''}
+      </article>`;
   }).join('');
 }
+
+// Card par Download notes ka button
+document.getElementById('listingGrid').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.dl-btn');
+  if (!btn) return;
+
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Preparing...';
+
+  const { data, error } = await supabaseClient.storage
+    .from('listing-files')
+    .createSignedUrl(btn.dataset.path, 60, { download: true });
+
+  btn.disabled = false;
+  btn.textContent = original;
+
+  if (error) {
+    alert('Could not create the download link: ' + error.message);
+    return;
+  }
+  window.location.href = data.signedUrl;
+});
 
 loadListings();
