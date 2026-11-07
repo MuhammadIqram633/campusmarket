@@ -24,7 +24,9 @@ async function getUserInfo() {
 function actionHtml(item, user) {
   if (!item.file_path) return '';
   if (!user.userId) {
-    return '<a class="btn btn-small" href="login.html">Login to get notes</a>';
+      const paid = !item.exchange_only && item.price != null;
+  const label = paid ? `Buy notes (Rs. ${item.price})` : 'Get notes';
+  return `<a class="btn btn-small" href="listing.html?id=${item.id}">${label}</a>`;
   }
   if (item.seller_id === user.userId || user.accepted.has(item.id)) {
     return `<button class="btn btn-small dl-btn" data-path="${item.file_path}">Download notes</button>`;

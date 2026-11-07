@@ -1,5 +1,6 @@
 const conditionLabels = { new: 'New', like_new: 'Like new', good: 'Good', fair: 'Fair' };
 const categoryLabels = { textbook: 'Textbook', lab_equipment: 'Lab equipment' };
+const methodLabels = { jazzcash: 'JazzCash', easypaisa: 'EasyPaisa' };
 
 function escapeHtml(text) {
   const div = document.createElement('div');
@@ -11,7 +12,7 @@ function downloadHtml(label) {
   return `<button class="btn" id="downloadBtn">${label}</button><p class="message" id="dlMsg"></p>`;
 }
 
-// 60 second ka temporary link banata hai (storage policy khud check karti hai ke haq hai ya nahi)
+// 60 second ka temporary link (storage policy khud check karti hai ke haq hai ya nahi)
 function attachDownload(filePath) {
   const btn = document.getElementById('downloadBtn');
   const msg = document.getElementById('dlMsg');
@@ -29,13 +30,115 @@ function attachDownload(filePath) {
   });
 }
 
+// Screenshot se amount parhna (OCR). Ye sirf andaza hai, pakka saboot nahi.
+async function checkProof(file, price) {
+  try {
+    const result = await Tesseract.recognize(file, 'eng');
+    const text = (result.data.text || '').replace(/,/g, '');
+    const numbers = (text.match(/\d+(\.\d+)?/g) || []).map(Number);
+    return numbers.includes(Number(price)) ? 'amount_matched' : 'amount_not_found';
+  } catch (err) {
+    console.error(err);
+    return 'ocr_failed';
+  }
+}
+
+// Paid notes ka payment box
+function renderPayBox(section, listing, account, user) {
+  section.innerHTML = `
+    <div class="pay-box">
+      <h3>Buy these notes: Rs. ${listing.price}</h3>
+      <ol class="pay-steps">
+        <li>Send Rs. ${listing.price} to this ${methodLabels[account.method]} account:
+          <div class="pay-info">
+            <strong>${escapeHtml(account.account_number)}</strong><br>
+            Account name: ${escapeHtml(account.account_name)}
+          </div>
+        </li>
+        <li>Enter the Transaction ID from your payment message.</li>
+        <li>Upload a screenshot of the payment.</li>
+      </ol>
+      <input type="text" id="txnId" placeholder="Transaction ID">
+      <input type="file" id="proofFile" accept="image/jpeg,image/png,image/webp">
+      <textarea id="payNote" rows="2" placeholder="Message to the seller (optional)"></textarea>
+      <button class="btn" id="payBtn">Submit payment</button>
+      <p class="message" id="payMsg"></p>
+      <p class="note">If the amount in your screenshot matches, the download opens at once. Otherwise the seller checks your payment first.</p>
+    </div>`;
+
+  document.getElementById('payBtn').addEventListener('click', async () => {
+    const msg = document.getElementById('payMsg');
+    const btn = document.getElementById('payBtn');
+    const txn = document.getElementById('txnId').value.trim();
+    const file = document.getElementById('proofFile').files[0];
+    const note = document.getElementById('payNote').value.trim();
+
+    if (!/^[A-Za-z0-9]{8,}$/.test(txn)) {
+      msg.textContent = 'Enter a valid Transaction ID (letters and numbers, at least 8 characters).';
+      return;
+    }
+    if (!file) {
+      msg.textContent = 'Please upload the payment screenshot.';
+      return;
+    }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      msg.textContent = 'The screenshot must be a JPG, PNG or WebP image.';
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      msg.textContent = 'The screenshot is too large (maximum 3 MB).';
+      return;
+    }
+
+    btn.disabled = true;
+    msg.textContent = 'Reading the screenshot (the first time can take up to a minute)...';
+    const check = await checkProof(file, listing.price);
+
+    msg.textContent = 'Uploading...';
+    const ext = file.type.split('/')[1].replace('jpeg', 'jpg');
+    const path = `${user.id}/${listing.id}-${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabaseClient.storage
+      .from('payment-proofs')
+      .upload(path, file, { contentType: file.type });
+    if (uploadError) {
+      msg.textContent = 'Could not upload the screenshot: ' + uploadError.message;
+      btn.disabled = false;
+      return;
+    }
+
+    const { error } = await supabaseClient.rpc('submit_payment_request', {
+      p_listing_id: listing.id,
+      p_message: note,
+      p_meeting_note: null,
+      p_transaction_id: txn,
+      p_proof_path: path,
+      p_proof_check: check
+    });
+    if (error) {
+      msg.textContent = error.code === '23505'
+        ? 'This Transaction ID was already used.'
+        : error.message;
+      btn.disabled = false;
+      return;
+    }
+
+    if (check === 'amount_matched') {
+      section.innerHTML = '<p class="note">Payment recorded. Your download is ready.</p>'
+        + downloadHtml('Download full notes');
+      attachDownload(listing.file_path);
+    } else {
+      section.innerHTML = '<p class="note">Payment proof sent. We could not confirm the amount automatically, so the seller will check it and release the file.</p>';
+    }
+  });
+}
+
 async function renderRequestSection(listing) {
   const section = document.getElementById('requestSection');
   const { data } = await supabaseClient.auth.getSession();
   const user = data.session ? data.session.user : null;
 
   if (!user) {
-    section.innerHTML = '<p class="muted">Please <a href="login.html">login</a> to send a request to the seller.</p>';
+    section.innerHTML = '<p class="muted">Please <a href="login.html">login</a> to buy or request these notes.</p>';
     return;
   }
 
@@ -55,7 +158,6 @@ async function renderRequestSection(listing) {
     .eq('buyer_id', user.id);
   const statuses = (mine || []).map(r => r.status);
 
-  // Accept ho chuki ho to download (listing reserved ya sold ho tab bhi)
   if (statuses.includes('accepted') || statuses.includes('completed')) {
     section.innerHTML = '<p class="note">The seller accepted your request.</p>'
       + (listing.file_path ? downloadHtml('Download full notes') : '');
@@ -71,6 +173,23 @@ async function renderRequestSection(listing) {
     return;
   }
 
+  // Price wali PDF: payment box
+  const isPaid = listing.file_path && !listing.exchange_only && listing.price != null;
+  if (isPaid) {
+    const { data: account } = await supabaseClient
+      .from('payment_accounts')
+      .select('method, account_number, account_name')
+      .eq('user_id', listing.seller_id)
+      .maybeSingle();
+    if (!account) {
+      section.innerHTML = '<p class="muted">The seller has not added a payment account yet, so this item cannot be bought right now.</p>';
+      return;
+    }
+    renderPayBox(section, listing, account, user);
+    return;
+  }
+
+  // Baqi sab (exchange ya physical item): normal request
   section.innerHTML = `
     <div class="request-box">
       <h3>Send a request</h3>
@@ -142,7 +261,7 @@ async function loadListing() {
     : '<p class="muted">No photos or preview pages for this listing.</p>';
 
   const fileNote = data.file_path
-    ? '<p class="note">These are preview pages only. The full notes are released after the seller accepts your request.</p>'
+    ? '<p class="note">These are preview pages only. The full notes are released after payment or the seller\'s approval.</p>'
     : '';
 
   box.innerHTML = `

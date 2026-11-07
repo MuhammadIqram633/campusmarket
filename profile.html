@@ -35,16 +35,38 @@
 
       <button class="btn" id="sellerBtn" style="display:none"></button>
       <p class="message" id="profileMsg"></p>
+
+      <div id="paymentBox" style="display:none">
+        <h3 class="section-title">Payment account</h3>
+        <p class="muted">Buyers of your paid notes will send money to this account. Use your own number.</p>
+        <div class="form-group">
+          <label for="payMethod">Method</label>
+          <select id="payMethod">
+            <option value="jazzcash">JazzCash</option>
+            <option value="easypaisa">EasyPaisa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="payNumber">Mobile number</label>
+          <input type="text" id="payNumber" placeholder="03XXXXXXXXX" maxlength="11">
+        </div>
+        <div class="form-group">
+          <label for="payName">Account name</label>
+          <input type="text" id="payName" placeholder="Name shown in your wallet">
+        </div>
+        <button class="btn" id="paySave">Save payment account</button>
+        <p class="message" id="payMsg"></p>
+      </div>
     </div>
   </main>
 
   <footer class="footer">CampusMarket - Zynvex Virtual Internship Project</footer>
 
- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="js/supabaseClient.js"></script>
-<script src="js/auth.js"></script>
-<script>window.loginCheck = requireLogin();</script>
-<script src="js/nav.js"></script>
-<script src="js/profile.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script>window.loginCheck = requireLogin();</script>
+  <script src="js/nav.js"></script>
+  <script src="js/profile.js"></script>
 </body>
 </html>

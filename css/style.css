@@ -128,3 +128,8 @@ textarea { resize: vertical; }
 .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform: translateY(-2px); }
 .card-footer { padding: 0 12px 12px; }
 .card-footer .btn { display: inline-block; text-decoration: none; }
+.pay-box { margin-top: 24px; padding: 16px; background: #fff; border: 1px solid var(--border); border-radius: 8px; max-width: 480px; }
+.pay-box input, .pay-box textarea { margin-bottom: 10px; }
+.pay-steps { margin: 8px 0 12px 20px; font-size: 14px; }
+.pay-steps li { margin-bottom: 8px; }
+.pay-info { background: #f1f5f9; border-radius: 6px; padding: 8px 12px; margin-top: 6px; font-size: 15px; }
