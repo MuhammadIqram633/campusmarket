@@ -7,7 +7,28 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Buyer ke liye request ka hissa (login, apni listing, pehle se request, sab check hote hain)
+function downloadHtml(label) {
+  return `<button class="btn" id="downloadBtn">${label}</button><p class="message" id="dlMsg"></p>`;
+}
+
+// 60 second ka temporary link banata hai (storage policy khud check karti hai ke haq hai ya nahi)
+function attachDownload(filePath) {
+  const btn = document.getElementById('downloadBtn');
+  const msg = document.getElementById('dlMsg');
+  btn.addEventListener('click', async () => {
+    msg.textContent = 'Preparing download...';
+    const { data, error } = await supabaseClient.storage
+      .from('listing-files')
+      .createSignedUrl(filePath, 60, { download: true });
+    if (error) {
+      msg.textContent = 'Could not create the download link: ' + error.message;
+      return;
+    }
+    msg.textContent = '';
+    window.location.href = data.signedUrl;
+  });
+}
+
 async function renderRequestSection(listing) {
   const section = document.getElementById('requestSection');
   const { data } = await supabaseClient.auth.getSession();
@@ -17,35 +38,37 @@ async function renderRequestSection(listing) {
     section.innerHTML = '<p class="muted">Please <a href="login.html">login</a> to send a request to the seller.</p>';
     return;
   }
+
+  // Seller apni file khud download kar sakta hai
   if (user.id === listing.seller_id) {
-    section.innerHTML = '<p class="muted">This is your listing.</p>';
+    section.innerHTML = '<p class="muted">This is your listing.</p>'
+      + (listing.file_path ? downloadHtml('Download your file') : '');
+    if (listing.file_path) attachDownload(listing.file_path);
+    return;
+  }
+
+  // Is buyer ki is listing par saari requests
+  const { data: mine } = await supabaseClient
+    .from('requests')
+    .select('status')
+    .eq('listing_id', listing.id)
+    .eq('buyer_id', user.id);
+  const statuses = (mine || []).map(r => r.status);
+
+  // Accept ho chuki ho to download (listing reserved ya sold ho tab bhi)
+  if (statuses.includes('accepted') || statuses.includes('completed')) {
+    section.innerHTML = '<p class="note">The seller accepted your request.</p>'
+      + (listing.file_path ? downloadHtml('Download full notes') : '');
+    if (listing.file_path) attachDownload(listing.file_path);
+    return;
+  }
+  if (statuses.includes('pending')) {
+    section.innerHTML = '<p class="note">Your request has been sent. Waiting for the seller to reply.</p>';
     return;
   }
   if (listing.status !== 'available') {
     section.innerHTML = '<p class="muted">This item is no longer available.</p>';
     return;
-  }
-
-  // Kya is buyer ki pehle se koi request hai?
-  const { data: existing } = await supabaseClient
-    .from('requests')
-    .select('status')
-    .eq('listing_id', listing.id)
-    .eq('buyer_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (existing && existing.length > 0) {
-    const status = existing[0].status;
-    if (status === 'pending') {
-      section.innerHTML = '<p class="note">Your request has been sent. Waiting for the seller to reply.</p>';
-      return;
-    }
-    if (status === 'accepted' || status === 'completed') {
-      section.innerHTML = '<p class="note">The seller accepted your request.</p>';
-      return;
-    }
-    // declined ho to dobara request bhej sakta hai
   }
 
   section.innerHTML = `

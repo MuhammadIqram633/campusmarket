@@ -124,3 +124,7 @@ textarea { resize: vertical; }
 .modal-actions .btn { text-decoration: none; display: inline-block; }
 .btn-grey { background: #6b7280; }
 .btn-grey:hover { background: #4b5563; }
+.card .card-link { display: block; color: inherit; text-decoration: none; }
+.card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform: translateY(-2px); }
+.card-footer { padding: 0 12px 12px; }
+.card-footer .btn { display: inline-block; text-decoration: none; }
