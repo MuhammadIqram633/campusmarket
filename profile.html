@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile - CampusMarket</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body style="visibility:hidden">
+  <header class="navbar">
+    <div class="container">
+      <a class="logo" href="index.html">CampusMarket</a>
+      <nav>
+        <ul id="navLinks" style="visibility:hidden"></ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="form-box">
+      <h2>My profile</h2>
+      <p><strong>Name:</strong> <span id="pName"></span></p>
+      <p><strong>Department:</strong> <span id="pDept"></span></p>
+      <p><strong>Email:</strong> <span id="pEmail"></span></p>
+
+      <h3 class="section-title">Selling</h3>
+      <p id="sellerStatus">Loading...</p>
+
+      <div id="termsBox" style="display:none">
+        <label class="terms">
+          <input type="checkbox" id="termsCheck">
+          I will upload only study-related material (notes, books, lab items) that I own or have the right to share. I understand that CampusMarket may remove listings that break this rule.
+        </label>
+      </div>
+
+      <button class="btn" id="sellerBtn" style="display:none"></button>
+      <p class="message" id="profileMsg"></p>
+    </div>
+  </main>
+
+  <footer class="footer">CampusMarket - Zynvex Virtual Internship Project</footer>
+
+ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/auth.js"></script>
+<script>window.loginCheck = requireLogin();</script>
+<script src="js/nav.js"></script>
+<script src="js/profile.js"></script>
+</body>
+</html>
