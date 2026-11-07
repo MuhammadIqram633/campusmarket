@@ -133,3 +133,27 @@ textarea { resize: vertical; }
 .pay-steps { margin: 8px 0 12px 20px; font-size: 14px; }
 .pay-steps li { margin-bottom: 8px; }
 .pay-info { background: #f1f5f9; border-radius: 6px; padding: 8px 12px; margin-top: 6px; font-size: 15px; }
+/* ===== Mobile fixes ===== */
+html { -webkit-text-size-adjust: 100%; }
+img { max-width: 100%; }
+body { overflow-wrap: break-word; }
+
+.navbar ul { flex-wrap: wrap; justify-content: center; gap: 4px 16px; }
+.navbar a { display: inline-block; padding: 6px 0; }
+
+@media (max-width: 600px) {
+  /* iPhone par input dabane se auto-zoom na ho */
+  input, select, textarea { font-size: 16px; }
+
+  .container { padding: 0 12px; }
+  .form-box { margin: 20px auto; padding: 16px; }
+
+  .listing-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .card h3 { font-size: 15px; }
+  .card-footer .btn { display: block; text-align: center; }
+
+  .gallery a { flex: 1 1 140px; }
+  .gallery img { width: 100%; }
+
+  .my-row, .req-head { flex-direction: column; align-items: flex-start; }
+}
