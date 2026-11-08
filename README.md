@@ -186,7 +186,6 @@ campusmarket/
 
 ### Module 2
 
-<!-- Remove these comment markers once all these files are in the screenshots folder.
 
 #### Home page with live listings
 ![Home listings](screenshots/home-listings.png)
@@ -209,4 +208,3 @@ campusmarket/
 #### Storage buckets in Supabase
 ![Supabase storage](screenshots/supabase-storage.png)
 
--->
