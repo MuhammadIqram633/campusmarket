@@ -2,6 +2,21 @@ const conditionLabels = { new: 'New', like_new: 'Like new', good: 'Good', fair: 
 const categoryLabels = { textbook: 'Textbook', lab_equipment: 'Lab equipment' };
 const methodLabels = { jazzcash: 'JazzCash', easypaisa: 'EasyPaisa' };
 
+// Bhari library sirf zaroorat par load hoti hai
+const scriptCache = {};
+function loadScript(src) {
+  if (!scriptCache[src]) {
+    scriptCache[src] = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  return scriptCache[src];
+}
+
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text ?? '';
@@ -33,6 +48,7 @@ function attachDownload(filePath) {
 // Screenshot se amount parhna (OCR). Ye sirf andaza hai, pakka saboot nahi.
 async function checkProof(file, price) {
   try {
+    await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
     const result = await Tesseract.recognize(file, 'eng');
     const text = (result.data.text || '').replace(/,/g, '');
     const numbers = (text.match(/\d+(\.\d+)?/g) || []).map(Number);
@@ -256,7 +272,7 @@ async function loadListing() {
 
   const gallery = data.listing_images.length > 0
     ? data.listing_images.map((img, i) =>
-        `<a href="${img.image_url}" target="_blank"><img src="${img.image_url}" alt="Page ${i + 1}"></a>`
+        `<a href="${img.image_url}" target="_blank"><img src="${img.image_url}" alt="Page ${i + 1}" loading="lazy"></a>`
       ).join('')
     : '<p class="muted">No photos or preview pages for this listing.</p>';
 

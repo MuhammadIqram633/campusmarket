@@ -17,6 +17,7 @@ Students struggle to find affordable used textbooks and lab equipment, and there
 - **Frontend:** HTML, CSS and JavaScript
 - **Backend:** Supabase (PostgreSQL database, authentication and file storage)
 - **PDF previews:** pdf.js (runs in the browser)
+- **Payment screenshot check:** Tesseract.js OCR (runs in the browser)
 - **Hosting:** GitHub Pages (free)
 
 ## Project plan
@@ -24,7 +25,7 @@ Students struggle to find affordable used textbooks and lab equipment, and there
 | Module | Dates | Focus | Status |
 |---|---|---|---|
 | Module 1 | Oct 26 - Nov 01 | Setup, database design, authentication | Completed |
-| Module 2 | Nov 02 - Nov 08 | Listings, previews, buyer-seller requests | In progress |
+| Module 2 | Nov 02 - Nov 08 | Listings, requests, payments | Completed |
 | Module 3 | Nov 09 - Nov 15 | Search, filters, safety reporting, polish | Planned |
 | Module 4 | Nov 16 - Nov 22 | Testing, deployment, documentation | Planned |
 
@@ -42,11 +43,12 @@ The database is relational (PostgreSQL). Tables are connected with foreign keys,
 
 | Table | Main fields | Purpose |
 |---|---|---|
-| `profiles` | id, full_name, department, role, created_at | User details linked to the login account. Role is `student` or `admin` |
+| `profiles` | id, full_name, department, role, is_seller, created_at | User details linked to the login account. Role is `student` or `admin` |
 | `listings` | id, seller_id, title, course_code, category, condition, price, exchange_only, description, status, file_path | Textbooks, notes and lab equipment posted by students |
 | `listing_images` | id, listing_id, image_url | Preview images of each listing |
-| `requests` | id, listing_id, buyer_id, message, meeting_note, status | Buyer-seller requests (pending, accepted, declined, completed) |
+| `requests` | id, listing_id, buyer_id, message, meeting_note, status, transaction_id, proof_path, amount, proof_check | Buyer-seller requests and payment details |
 | `reports` | id, listing_id, reporter_id, reason, details, status | Safety reports reviewed by an admin |
+| `payment_accounts` | user_id, method, account_number, account_name | Seller's JazzCash or EasyPaisa account |
 
 Validation rules are enforced by the database itself:
 
@@ -54,6 +56,7 @@ Validation rules are enforced by the database itself:
 - `status` values are restricted for listings, requests and reports.
 - `price` cannot be negative.
 - A buyer can have only one pending request per listing (unique index).
+- A payment Transaction ID can be used only once (unique index).
 - An index on course code prepares the search feature for Module 3.
 - Deleting a user or listing also removes its related data (`on delete cascade`).
 
@@ -64,10 +67,11 @@ The complete SQL is in [`database/schema.sql`](database/schema.sql).
 | Table | Rules |
 |---|---|
 | `profiles` | Everyone can view profiles. A user can create and update only their own profile, and cannot make themselves an admin. |
-| `listings` | Everyone can view available listings. A seller can create, edit and delete only their own listings. Hidden listings are visible only to the seller and admins. |
+| `listings` | Everyone can view available listings. Only sellers can create listings, and a seller can edit and delete only their own. Hidden listings are visible only to the seller and admins. |
 | `listing_images` | Everyone can view. Only the owner of the listing can add or delete images. |
 | `requests` | Only the buyer and the seller of the listing can view a request. A buyer cannot send a request on their own listing. Only the seller can update the status. |
 | `reports` | Any logged-in user can submit a report. Only admins can view and update reports. |
+| `payment_accounts` | Logged-in users can view accounts. A user can change only their own. |
 
 ### Authentication flow
 
@@ -77,34 +81,61 @@ The complete SQL is in [`database/schema.sql`](database/schema.sql).
 
 The Supabase project URL and the publishable (anon) key are used in `js/supabaseClient.js`. The publishable key is designed to be public. Data is protected by Row Level Security, and no secret keys are stored in this repository.
 
-## Module 2: listings and previews (in progress)
+## Module 2: listings, requests and payments (completed)
 
-Completed so far:
+### Features
 
-- **Sell page:** logged-in users can post a listing (title, course code, category, condition, price or exchange-only, description) with form validation. A visitor who is not logged in is sent to the login page.
-- **Live listings:** the home page loads listings from the database and shows them as cards.
-- **Automatic PDF previews:** when a seller uploads a PDF, the first 3 pages are converted to images in the browser (pdf.js) and used as the public preview. Photos (JPG, PNG, WebP) can also be uploaded.
+- **Seller mode:** new users start as buyers. A user enables selling on the Profile page after accepting the selling rules (study-related material that they have the right to share). The database also blocks listings from accounts that are not sellers.
+- **Sell page:** logged-in sellers post a listing (title, course code, category, condition, price or exchange-only, description) with form validation.
+- **Live listings:** the home page loads listings from the database as cards, with images loaded lazily for speed.
+- **Automatic PDF previews:** when a seller uploads a PDF, the first 3 pages are converted to images in the browser (pdf.js) and shown publicly as a preview. Photos (JPG, PNG, WebP) can be uploaded for physical items.
 - **Private file storage:** the full PDF is saved in a private Supabase Storage bucket. Only the seller, or a buyer whose request was accepted, can read it. This is enforced by storage policies in the database, not only by the interface.
-- **Listing detail page:** clicking a card opens a page with the preview pages, description, condition, price and seller details.
-- **Navbar login state:** the navigation bar shows Logout when the user is logged in, and Login and Register when logged out.
+- **Listing detail page:** preview pages, description, condition, price and seller details.
+- **Buttons on every card:** Buy notes, Get notes, Download notes or Request item, depending on the listing and the user.
+- **My Listings:** sellers change the status of a listing (available, reserved, sold) or delete it.
+- **Requests page:** sellers see the requests they received and accept, decline or complete them. Buyers follow the status of the requests they sent.
+- **Role-based navigation bar:** Login and Register for visitors, Logout, Requests and Profile for users, and My Listings only for sellers. If a buyer presses Sell, a popup asks them to enable selling first.
+- **Responsive theme:** one stylesheet with a mobile layout. Heavy libraries (pdf.js and Tesseract.js) load only when they are needed.
 
-Still to do in this module:
+### How payment works (no payment gateway)
 
-- Buyer request form and request log
-- Seller Accept/Decline, and file download for accepted buyers
-- My Listings page (edit, delete, mark as sold)
+The platform never handles money. Payment goes directly from buyer to seller through JazzCash or EasyPaisa.
 
-### How file sharing works (no payment gateway)
+1. The seller saves a JazzCash or EasyPaisa number in their Profile.
+2. On a paid PDF listing, the buyer sees the seller's account details and the price.
+3. The buyer pays, then enters the Transaction ID and uploads a screenshot of the payment.
+4. The browser reads the screenshot (Tesseract.js OCR) and looks for the listing price. If the amount is found, the request is accepted at once and the download opens. If not, the request waits for the seller.
+5. The seller sees the amount expected, the Transaction ID, the screenshot and the result of the automatic check. The seller can accept, or press **Payment not received**, which removes the buyer's access to the file.
 
-The platform does not handle money. A buyer sends a request, and the buyer and seller agree on the payment between themselves. When the seller accepts the request, the buyer gets access to the full file. Physical books are exchanged through a meeting request.
+Safety rules in the database:
+
+- A Transaction ID can be used only once.
+- Payment requests are created through a database function (`submit_payment_request`) that checks the listing, the price, the seller's account and the screenshot on the server side. A buyer cannot accept their own request.
+- Payment screenshots are stored in a private bucket. Only the buyer and the seller of that listing can open them.
+
+### Limitations
+
+- The screenshot check is only an estimate. A real payment cannot be verified without access to the seller's wallet or a paid payment API, so the seller must confirm the money in their own JazzCash or EasyPaisa app. The **Payment not received** button exists for this reason.
+- Study-related content is controlled through the seller rules, the report tool planned for Module 3, and admin review.
+
+## Planned for Module 3
+
+- Search by course code and filters (condition, category, price)
+- Report button and admin review page
+- Limit on how many times the same file can be uploaded
+- Edit listing, and a study-relevance check for uploads
+- Exchange flow where a buyer offers their own notes
 
 ## Project structure
 
 ```
 campusmarket/
   index.html               home page with live listings
-  listing.html             listing detail page
+  listing.html             listing detail, buy and request
   create-listing.html      sell page
+  my-listings.html         seller dashboard
+  requests.html            requests received and sent, payment review
+  profile.html             profile, seller mode, payment account
   login.html
   register.html
   css/
@@ -112,12 +143,15 @@ campusmarket/
   js/
     supabaseClient.js      connects the website to Supabase
     auth.js                login check for protected pages
-    nav.js                 navigation bar (login state, logout)
+    nav.js                 role-based navigation bar and seller popup
     register.js            registration logic
     login.js               login logic
-    home.js                loads and shows listings
-    listing.js             listing detail page
+    home.js                loads listings, card buttons, downloads
+    listing.js             detail page, payment box, OCR check
     create-listing.js      sell form, PDF previews and uploads
+    my-listings.js         status change and delete
+    requests.js            request management and payment review
+    profile.js             seller mode and payment account
   database/
     schema.sql             tables, validation rules, storage and security policies
   images/
@@ -133,33 +167,46 @@ campusmarket/
 
 ## Screenshots
 
-### Home page
+### Module 1
+
+#### Home page (sample cards)
 ![Home page](screenshots/home-page.png)
 
-### Register page
+#### Register page
 ![Register page](screenshots/register-page.png)
 
-### Login page
+#### Login page
 ![Login page](screenshots/login-page.png)
 
-### Database tables in Supabase
+#### Database tables in Supabase
 ![Supabase tables](screenshots/supabase-tables.png)
 
-### Registered user in Supabase Authentication
+#### Registered user in Supabase Authentication
 ![Supabase user](screenshots/supabase-users-profiles.png)
 
-<!-- Module 2 screenshots: remove the comment markers once these files are in the screenshots folder.
+### Module 2
 
-### Home page with live listings
+<!-- Remove these comment markers once all these files are in the screenshots folder.
+
+#### Home page with live listings
 ![Home listings](screenshots/home-listings.png)
 
-### Listing detail page
+#### Listing detail page
 ![Listing detail](screenshots/listing-detail.png)
 
-### Sell page
+#### Sell page
 ![Sell page](screenshots/sell-page.png)
 
-### Storage buckets in Supabase
+#### Profile with seller mode and payment account
+![Profile](screenshots/profile-seller.png)
+
+#### Buyer payment box
+![Payment box](screenshots/payment-box.png)
+
+#### Seller reviewing a payment request
+![Seller requests](screenshots/requests-seller.png)
+
+#### Storage buckets in Supabase
 ![Supabase storage](screenshots/supabase-storage.png)
 
 -->
