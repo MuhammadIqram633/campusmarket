@@ -26,7 +26,7 @@ Students struggle to find affordable used textbooks and lab equipment, and there
 |---|---|---|---|
 | Module 1 | Oct 26 - Nov 01 | Setup, database design, authentication | Completed |
 | Module 2 | Nov 02 - Nov 08 | Listings, requests, payments | Completed |
-| Module 3 | Nov 09 - Nov 15 | Search, filters, safety reporting, polish | Planned |
+| Module 3 | Nov 09 - Nov 15 | Search, filters, safety reporting, polish | In progress |
 | Module 4 | Nov 16 - Nov 22 | Testing, deployment, documentation | Planned |
 
 ## Module 1: what was completed
@@ -118,13 +118,23 @@ Safety rules in the database:
 - The screenshot check is only an estimate. A real payment cannot be verified without access to the seller's wallet or a paid payment API, so the seller must confirm the money in their own JazzCash or EasyPaisa app. The **Payment not received** button exists for this reason.
 - Study-related content is controlled through the seller rules, the report tool planned for Module 3, and admin review.
 
-## Planned for Module 3
+## Module 3: search, filters and safety (in progress)
 
-- Search by course code and filters (condition, category, price)
+Completed so far:
+
+- **Search:** visitors search by course code (partial codes such as "CS" work), title and description. Results update while typing, and the search is not case sensitive.
+- **Filters:** condition, category, price range and an exchange-only option.
+- **Sorting:** newest first, price low to high, price high to low.
+- **Load more:** listings load 12 at a time, with a counter such as "Showing 12 of 30 listings". Helpful messages are shown when nothing matches.
+- **Navigation polish:** navigation links change color on hover and click, and the link of the current page is highlighted.
+
+Still to do in this module:
+
 - Report button and admin review page
 - Limit on how many times the same file can be uploaded
-- Edit listing, and a study-relevance check for uploads
-- Exchange flow where a buyer offers their own notes
+- Copyright confirmation on every listing, and a study-relevance check for uploads
+- Edit listing page
+- Exchange flow where a buyer offers their own notes (stretch goal)
 
 ## Project structure
 
@@ -186,6 +196,7 @@ campusmarket/
 
 ### Module 2
 
+ Remove these comment markers once all these files are in the screenshots folder.
 
 #### Home page with live listings
 ![Home listings](screenshots/home-listings.png)
@@ -207,4 +218,19 @@ campusmarket/
 
 #### Storage buckets in Supabase
 ![Supabase storage](screenshots/supabase-storage.png)
+
+
+
+### Module 3
+
+ Remove these comment markers once all these files are in the screenshots folder.
+
+#### Search and filters
+![Search and filters](screenshots/search-filters.png)
+
+#### Search results for a course code
+![Search results](screenshots/search-results.png)
+
+#### Navigation bar with the current page highlighted
+![Navigation bar](screenshots/navbar-active.png)
 
