@@ -17,18 +17,90 @@ function showSellerPopup() {
   document.getElementById('popupClose').addEventListener('click', () => overlay.remove());
 }
 
+// Chhota popup (toast) jo kuch second baad khud chala jata hai
+function showToast(message, link) {
+  let box = document.getElementById('toastBox');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'toastBox';
+    box.className = 'toast-box';
+    document.body.appendChild(box);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+
+  const text = document.createElement('span');
+  text.textContent = message;
+  toast.appendChild(text);
+
+  if (link) {
+    const a = document.createElement('a');
+    a.href = link;
+    a.textContent = 'View';
+    toast.appendChild(a);
+  }
+
+  const close = document.createElement('button');
+  close.className = 'toast-close';
+  close.textContent = '\u00d7';
+  close.addEventListener('click', () => toast.remove());
+  toast.appendChild(close);
+
+  box.appendChild(toast);
+  setTimeout(() => toast.remove(), 9000);
+}
+
+function setBadge(n) {
+  const badge = document.getElementById('notifBadge');
+  if (!badge) return;
+  badge.textContent = n > 9 ? '9+' : String(n);
+  badge.style.display = n > 0 ? 'inline-block' : 'none';
+}
+
+// Unread ginti, aur naye notification ka live popup
+async function setupNotifications(userId) {
+  async function recount() {
+    const { count } = await supabaseClient
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_read', false);
+    setBadge(count || 0);
+    return count || 0;
+  }
+  window.refreshNotifBadge = recount;
+
+  const unread = await recount();
+  if (unread > 0 && !sessionStorage.getItem('notifShown')) {
+    sessionStorage.setItem('notifShown', '1');
+    showToast(`You have ${unread} unread notification${unread > 1 ? 's' : ''}.`, 'notifications.html');
+  }
+
+  supabaseClient
+    .channel('notif-' + userId)
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+      (payload) => {
+        showToast(payload.new.message, payload.new.link);
+        recount();
+        if (window.onNewNotification) window.onNewNotification();
+      })
+    .subscribe();
+}
+
 (async () => {
   const ul = document.getElementById('navLinks');
   if (!ul) return;
 
   let loggedIn = false;
   let isSeller = false;
+  let userId = null;
   try {
     const { data } = await supabaseClient.auth.getSession();
     loggedIn = !!data.session;
     if (loggedIn) {
+      userId = data.session.user.id;
       const { data: profile } = await supabaseClient
-        .from('profiles').select('is_seller').eq('id', data.session.user.id).maybeSingle();
+        .from('profiles').select('is_seller').eq('id', userId).maybeSingle();
       isSeller = !!(profile && profile.is_seller);
     }
   } catch (err) {
@@ -47,6 +119,7 @@ function showSellerPopup() {
   if (loggedIn) {
     if (isSeller) links.push({ text: 'My Listings', href: 'my-listings.html' });
     links.push({ text: 'Requests', href: 'requests.html' });
+    links.push({ text: 'Alerts', href: 'notifications.html', bell: true });
     links.push({ text: 'Profile', href: 'profile.html' });
     links.push({ text: 'Logout', href: '#', logout: true });
   } else {
@@ -64,12 +137,21 @@ function showSellerPopup() {
     a.textContent = link.text;
     a.href = link.href;
     if (link.href === currentPage) a.classList.add('active');
+
+    if (link.bell) {
+      const badge = document.createElement('span');
+      badge.id = 'notifBadge';
+      badge.className = 'notif-badge';
+      badge.style.display = 'none';
+      a.appendChild(badge);
+    }
     if (link.popup) {
       a.addEventListener('click', (e) => { e.preventDefault(); showSellerPopup(); });
     }
     if (link.logout) {
       a.addEventListener('click', async (e) => {
         e.preventDefault();
+        sessionStorage.removeItem('notifShown');
         await supabaseClient.auth.signOut();
         window.location.href = 'index.html';
       });
@@ -78,4 +160,6 @@ function showSellerPopup() {
     ul.appendChild(li);
   });
   ul.style.visibility = 'visible';
+
+  if (loggedIn) setupNotifications(userId);
 })();
