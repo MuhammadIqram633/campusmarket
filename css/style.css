@@ -256,3 +256,11 @@ small { color: var(--muted); display: block; margin-top: 4px; }
 @media (max-width: 640px) {
   .filters select, .filters input[type="number"] { flex: 1 1 45%; }
 }
+/* ----- Navbar link colors ----- */
+.navbar ul a:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.navbar ul a:active { background: rgba(255, 255, 255, 0.32); color: #fff; transform: scale(0.97); }
+.navbar ul a:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* Jis page par aap hain uska link */
+.navbar ul a.active { background: #fff; color: var(--primary-dark); font-weight: 600; }
+.navbar ul a.active:hover { background: #e0e7ff; color: var(--primary-dark); }

@@ -54,12 +54,16 @@ function showSellerPopup() {
     links.push({ text: 'Register', href: 'register.html' });
   }
 
+  // Jis page par hain uska naam (jaise "requests.html")
+  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+
   ul.innerHTML = '';
   links.forEach(link => {
     const li = document.createElement('li');
     const a = document.createElement('a');
     a.textContent = link.text;
     a.href = link.href;
+    if (link.href === currentPage) a.classList.add('active');
     if (link.popup) {
       a.addEventListener('click', (e) => { e.preventDefault(); showSellerPopup(); });
     }
