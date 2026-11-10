@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CampusMarket - Student Textbook Marketplace</title>
+  <link rel="preconnect" href="https://dcgkdivastmgigmxcwua.supabase.co">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -21,22 +22,47 @@
       <h1>Buy and sell used textbooks on campus</h1>
       <p>Find course books and lab equipment from other students.</p>
       <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Search by course code, e.g. CS-201">
+        <input type="text" id="searchInput" placeholder="Search by course code or title, e.g. CS-201">
         <button class="btn" id="searchBtn">Search</button>
       </div>
     </section>
 
-    <h2 class="section-title">Latest listings</h2>
-    <!-- These 3 cards are sample data. Later, JavaScript will fill this from the database. -->
-    <section class="listing-grid" id="listingGrid">
-     
-     <p id="emptyMsg"></p>
+    <section class="filters">
+      <select id="condFilter">
+        <option value="">Any condition</option>
+        <option value="new">New</option>
+        <option value="like_new">Like new</option>
+        <option value="good">Good</option>
+        <option value="fair">Fair</option>
+      </select>
+      <select id="catFilter">
+        <option value="">All categories</option>
+        <option value="textbook">Textbook</option>
+        <option value="lab_equipment">Lab equipment</option>
+      </select>
+      <input type="number" id="minPrice" placeholder="Min Rs." min="0">
+      <input type="number" id="maxPrice" placeholder="Max Rs." min="0">
+      <select id="sortSelect">
+        <option value="newest">Newest first</option>
+        <option value="price_asc">Price: low to high</option>
+        <option value="price_desc">Price: high to low</option>
+      </select>
+      <label class="filter-check"><input type="checkbox" id="exchFilter"> Exchange only</label>
+      <button class="btn btn-small btn-grey" id="clearBtn">Clear</button>
     </section>
+
+    <h2 class="section-title">Latest listings</h2>
+    <p class="muted" id="resultInfo"></p>
+    <section class="listing-grid" id="listingGrid"></section>
+    <p class="muted" id="emptyMsg"></p>
+    <div class="load-more"><button class="btn btn-grey" id="loadMore" style="display:none">Load more</button></div>
   </main>
- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="js/supabaseClient.js"></script>
-<script src="js/nav.js"></script>
-<script src="js/home.js"></script>
+
   <footer class="footer">CampusMarket - Zynvex Virtual Internship Project</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/home.js"></script>
 </body>
 </html>

@@ -248,3 +248,11 @@ small { color: var(--muted); display: block; margin-top: 4px; }
   .gallery img { width: 100%; }
   .my-row, .req-head { flex-direction: column; align-items: flex-start; }
 }
+/* ----- Filters ----- */
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); }
+.filters select, .filters input[type="number"] { width: auto; flex: 1 1 140px; padding: 9px 12px; }
+.filter-check { display: flex; align-items: center; gap: 4px; font-size: 14px; white-space: nowrap; }
+.load-more { text-align: center; padding-bottom: 40px; }
+@media (max-width: 640px) {
+  .filters select, .filters input[type="number"] { flex: 1 1 45%; }
+}
