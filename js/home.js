@@ -5,6 +5,7 @@ let user = { userId: null, accepted: new Set() };
 let page = 0;
 let loaded = 0;
 let requestId = 0;
+let pdfOnly = false;
 
 const grid = document.getElementById('listingGrid');
 const emptyMsg = document.getElementById('emptyMsg');
@@ -17,11 +18,29 @@ const minPrice = document.getElementById('minPrice');
 const maxPrice = document.getElementById('maxPrice');
 const exchFilter = document.getElementById('exchFilter');
 const sortSelect = document.getElementById('sortSelect');
+const chips = document.querySelectorAll('.chip');
 
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text ?? '';
   return div.innerHTML;
+}
+
+// Course code se rang banata hai, taake har card ka placeholder alag nazar aaye
+function hueFor(text) {
+  let h = 0;
+  for (const ch of String(text || 'x')) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return h;
+}
+
+function skeletonHtml(n) {
+  return Array.from({ length: n }, () => `
+    <div class="skeleton-card">
+      <div class="sk sk-img"></div>
+      <div class="sk sk-line"></div>
+      <div class="sk sk-line short"></div>
+      <div class="sk sk-line" style="margin-bottom:16px"></div>
+    </div>`).join('');
 }
 
 // Kaun login hai, aur kin listings ki request accept ho chuki hai
@@ -48,7 +67,7 @@ function actionHtml(item, user) {
 
   if (item.file_path) {
     if (item.seller_id === user.userId || user.accepted.has(item.id)) {
-      return `<button class="btn btn-small dl-btn" data-path="${item.file_path}">Download notes</button>`;
+      return `<button class="btn btn-small btn-green dl-btn" data-path="${item.file_path}">Download notes</button>`;
     }
     const paid = !item.exchange_only && item.price != null;
     const label = paid ? `Buy notes (Rs. ${item.price})` : 'Get notes';
@@ -62,15 +81,17 @@ function actionHtml(item, user) {
 }
 
 function cardHtml(item) {
-  const image = item.listing_images.length > 0
-    ? `<img src="${item.listing_images[0].image_url}" alt="" loading="lazy" decoding="async">`
-    : 'No photo';
+  const hue = hueFor(item.course_code || item.title);
+  const badge = item.file_path ? '<span class="badge-pdf">PDF</span>' : '';
+  const media = item.listing_images.length > 0
+    ? `<div class="card-img">${badge}<img src="${item.listing_images[0].image_url}" alt="" loading="lazy" decoding="async"></div>`
+    : `<div class="card-img placeholder" style="background:linear-gradient(135deg,hsl(${hue} 70% 52%),hsl(${(hue + 40) % 360} 70% 42%))">${badge}<span class="ph-code">${escapeHtml(item.course_code || 'Notes')}</span></div>`;
   const price = item.exchange_only ? 'Exchange only' : `Rs. ${item.price ?? '-'}`;
   const action = actionHtml(item, user);
   return `
     <article class="card">
       <a class="card-link" href="listing.html?id=${item.id}">
-        <div class="card-img">${image}</div>
+        ${media}
         <div class="card-body">
           <h3>${escapeHtml(item.title)}</h3>
           <p class="course">${escapeHtml(item.course_code)}</p>
@@ -84,7 +105,7 @@ function cardHtml(item) {
 
 function hasFilters() {
   return !!(searchInput.value.trim() || condFilter.value || catFilter.value
-    || minPrice.value || maxPrice.value || exchFilter.checked);
+    || minPrice.value || maxPrice.value || exchFilter.checked || pdfOnly);
 }
 
 // Filters ke mutabiq database query banata hai
@@ -104,6 +125,7 @@ function buildQuery() {
   if (minPrice.value !== '') q = q.gte('price', Number(minPrice.value));
   if (maxPrice.value !== '') q = q.lte('price', Number(maxPrice.value));
   if (exchFilter.checked) q = q.eq('exchange_only', true);
+  if (pdfOnly) q = q.not('file_path', 'is', null);
 
   if (sortSelect.value === 'price_asc') {
     q = q.order('price', { ascending: true, nullsFirst: false });
@@ -115,6 +137,19 @@ function buildQuery() {
   return q;
 }
 
+// Filters ke hisaab se kaun sa chip roshan ho
+function syncChips() {
+  let active = null;
+  if (!condFilter.value && !minPrice.value && !maxPrice.value && !searchInput.value.trim()) {
+    if (!catFilter.value && !exchFilter.checked && !pdfOnly) active = 'all';
+    else if (catFilter.value === 'textbook' && !exchFilter.checked && !pdfOnly) active = 'textbook';
+    else if (catFilter.value === 'lab_equipment' && !exchFilter.checked && !pdfOnly) active = 'lab';
+    else if (!catFilter.value && !exchFilter.checked && pdfOnly) active = 'pdf';
+    else if (!catFilter.value && exchFilter.checked && !pdfOnly) active = 'exchange';
+  }
+  chips.forEach(c => c.classList.toggle('active', c.dataset.chip === active));
+}
+
 const userReady = getUserInfo().then(u => { user = u; });
 
 async function loadListings(reset) {
@@ -123,10 +158,11 @@ async function loadListings(reset) {
   if (reset) {
     page = 0;
     loaded = 0;
-    grid.innerHTML = '';
+    grid.innerHTML = skeletonHtml(6);
     emptyMsg.textContent = '';
-    resultInfo.textContent = 'Loading...';
+    resultInfo.textContent = '';
     loadMoreBtn.style.display = 'none';
+    syncChips();
   }
 
   const from = page * PAGE_SIZE;
@@ -136,14 +172,14 @@ async function loadListings(reset) {
 
   if (myId !== requestId) return; // naya search shuru ho chuka hai, purana jawab chhor do
 
+  if (reset) grid.innerHTML = '';
+
   if (error) {
-    resultInfo.textContent = '';
     emptyMsg.textContent = 'Could not load listings: ' + error.message;
     return;
   }
 
   if (reset && data.length === 0) {
-    resultInfo.textContent = '';
     emptyMsg.textContent = hasFilters()
       ? 'No listings match your search. Try different words or clear the filters.'
       : 'No listings yet. Be the first to sell something!';
@@ -171,7 +207,7 @@ document.getElementById('searchBtn').addEventListener('click', () => loadListing
 [condFilter, catFilter, sortSelect, exchFilter, minPrice, maxPrice].forEach(el =>
   el.addEventListener('change', () => loadListings(true)));
 
-document.getElementById('clearBtn').addEventListener('click', () => {
+function resetFilters() {
   searchInput.value = '';
   condFilter.value = '';
   catFilter.value = '';
@@ -179,8 +215,24 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   maxPrice.value = '';
   exchFilter.checked = false;
   sortSelect.value = 'newest';
+  pdfOnly = false;
+}
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  resetFilters();
   loadListings(true);
 });
+
+// Chips: tez filters
+chips.forEach(chip => chip.addEventListener('click', () => {
+  resetFilters();
+  const type = chip.dataset.chip;
+  if (type === 'textbook') catFilter.value = 'textbook';
+  if (type === 'lab') catFilter.value = 'lab_equipment';
+  if (type === 'pdf') pdfOnly = true;
+  if (type === 'exchange') exchFilter.checked = true;
+  loadListings(true);
+}));
 
 loadMoreBtn.addEventListener('click', () => loadListings(false));
 

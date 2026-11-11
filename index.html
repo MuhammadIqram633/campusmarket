@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CampusMarket - Student Textbook Marketplace</title>
+  <title>CampusMarket - Student Textbook and Notes Marketplace</title>
   <link rel="preconnect" href="https://dcgkdivastmgigmxcwua.supabase.co">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -17,16 +19,24 @@
     </div>
   </header>
 
-  <main class="container">
-    <section class="hero">
-      <h1>Buy and sell used textbooks on campus</h1>
-      <p>Find course books and lab equipment from other students.</p>
+  <section class="hero">
+    <div class="container">
+      <span class="eyebrow">Student-to-student marketplace</span>
+      <h1>Buy and sell used <span>textbooks and notes</span> on campus</h1>
+      <p>Find course books, lecture notes and lab equipment from other students, at student prices.</p>
       <div class="search-bar">
         <input type="text" id="searchInput" placeholder="Search by course code or title, e.g. CS-201">
         <button class="btn" id="searchBtn">Search</button>
       </div>
-    </section>
+      <div class="hero-stats">
+        <span>Preview before you pay</span>
+        <span>Direct JazzCash / EasyPaisa</span>
+        <span>Free to use</span>
+      </div>
+    </div>
+  </section>
 
+  <main class="container">
     <section class="filters">
       <select id="condFilter">
         <option value="">Any condition</option>
@@ -51,11 +61,26 @@
       <button class="btn btn-small btn-grey" id="clearBtn">Clear</button>
     </section>
 
+    <div class="chips" id="chips">
+      <button class="chip active" data-chip="all">All</button>
+      <button class="chip" data-chip="textbook">Textbooks</button>
+      <button class="chip" data-chip="lab">Lab equipment</button>
+      <button class="chip" data-chip="pdf">PDF notes</button>
+      <button class="chip" data-chip="exchange">Exchange only</button>
+    </div>
+
     <h2 class="section-title">Latest listings</h2>
     <p class="muted" id="resultInfo"></p>
     <section class="listing-grid" id="listingGrid"></section>
     <p class="muted" id="emptyMsg"></p>
     <div class="load-more"><button class="btn btn-grey" id="loadMore" style="display:none">Load more</button></div>
+
+    <h2 class="section-title">How it works</h2>
+    <section class="steps-grid">
+      <div class="step-card"><span class="step-num">1</span><h3>Search and preview</h3><p>Find your course by code or title and look at the first pages before you decide.</p></div>
+      <div class="step-card"><span class="step-num">2</span><h3>Pay the seller directly</h3><p>Send the price by JazzCash or EasyPaisa and upload your payment screenshot.</p></div>
+      <div class="step-card"><span class="step-num">3</span><h3>Get the notes</h3><p>Download the full file once the payment is confirmed, or meet for a physical book.</p></div>
+    </section>
   </main>
 
   <footer class="footer">CampusMarket - Zynvex Virtual Internship Project</footer>
