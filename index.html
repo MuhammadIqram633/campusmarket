@@ -21,23 +21,28 @@
 
   <section class="hero">
     <div class="container">
-      <span class="eyebrow">Student-to-student marketplace</span>
       <h1>Buy and sell used <span>textbooks and notes</span> on campus</h1>
       <p>Find course books, lecture notes and lab equipment from other students, at student prices.</p>
       <div class="search-bar">
         <input type="text" id="searchInput" placeholder="Search by course code or title, e.g. CS-201">
         <button class="btn" id="searchBtn">Search</button>
       </div>
-      <div class="hero-stats">
-        <span>Preview before you pay</span>
-        <span>Direct JazzCash / EasyPaisa</span>
-        <span>Free to use</span>
-      </div>
     </div>
   </section>
 
   <main class="container">
-    <section class="filters">
+    <div class="chips-bar">
+      <div class="chips" id="chips">
+        <button class="chip active" data-chip="all">All</button>
+        <button class="chip" data-chip="textbook">Textbooks</button>
+        <button class="chip" data-chip="lab">Lab equipment</button>
+        <button class="chip" data-chip="pdf">PDF notes</button>
+        <button class="chip" data-chip="exchange">Exchange only</button>
+      </div>
+      <button class="btn btn-small btn-outline" id="filterToggle">Filters</button>
+    </div>
+
+    <section class="filters" id="filters">
       <select id="condFilter">
         <option value="">Any condition</option>
         <option value="new">New</option>
@@ -60,14 +65,6 @@
       <label class="filter-check"><input type="checkbox" id="exchFilter"> Exchange only</label>
       <button class="btn btn-small btn-grey" id="clearBtn">Clear</button>
     </section>
-
-    <div class="chips" id="chips">
-      <button class="chip active" data-chip="all">All</button>
-      <button class="chip" data-chip="textbook">Textbooks</button>
-      <button class="chip" data-chip="lab">Lab equipment</button>
-      <button class="chip" data-chip="pdf">PDF notes</button>
-      <button class="chip" data-chip="exchange">Exchange only</button>
-    </div>
 
     <h2 class="section-title">Latest listings</h2>
     <p class="muted" id="resultInfo"></p>

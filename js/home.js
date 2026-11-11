@@ -19,6 +19,20 @@ const maxPrice = document.getElementById('maxPrice');
 const exchFilter = document.getElementById('exchFilter');
 const sortSelect = document.getElementById('sortSelect');
 const chips = document.querySelectorAll('.chip');
+const filterPanel = document.getElementById('filters');
+const filterToggle = document.getElementById('filterToggle');
+
+// Panel kholna ya band karna
+filterToggle.addEventListener('click', () => filterPanel.classList.toggle('open'));
+
+// "Filters (2)": panel ke kitne filters lage hain
+function updateFilterCount() {
+  const n = [condFilter.value, catFilter.value, minPrice.value, maxPrice.value]
+    .filter(Boolean).length
+    + (exchFilter.checked ? 1 : 0)
+    + (sortSelect.value !== 'newest' ? 1 : 0);
+  filterToggle.textContent = n > 0 ? `Filters (${n})` : 'Filters';
+}
 
 function escapeHtml(text) {
   const div = document.createElement('div');
@@ -148,6 +162,7 @@ function syncChips() {
     else if (!catFilter.value && exchFilter.checked && !pdfOnly) active = 'exchange';
   }
   chips.forEach(c => c.classList.toggle('active', c.dataset.chip === active));
+  updateFilterCount();
 }
 
 const userReady = getUserInfo().then(u => { user = u; });
