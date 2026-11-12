@@ -93,6 +93,7 @@ async function setupNotifications(userId) {
 
   let loggedIn = false;
   let isSeller = false;
+  let isAdmin = false;
   let userId = null;
   try {
     const { data } = await supabaseClient.auth.getSession();
@@ -100,8 +101,9 @@ async function setupNotifications(userId) {
     if (loggedIn) {
       userId = data.session.user.id;
       const { data: profile } = await supabaseClient
-        .from('profiles').select('is_seller').eq('id', userId).maybeSingle();
+        .from('profiles').select('is_seller, role').eq('id', userId).maybeSingle();
       isSeller = !!(profile && profile.is_seller);
+      isAdmin = !!(profile && profile.role === 'admin');
     }
   } catch (err) {
     console.error(err);
@@ -118,6 +120,7 @@ async function setupNotifications(userId) {
 
   if (loggedIn) {
     if (isSeller) links.push({ text: 'My Listings', href: 'my-listings.html' });
+    if (isAdmin) links.push({ text: 'Admin', href: 'admin.html' });
     links.push({ text: 'Requests', href: 'requests.html' });
     links.push({ text: 'Alerts', href: 'notifications.html', bell: true });
     links.push({ text: 'Profile', href: 'profile.html' });

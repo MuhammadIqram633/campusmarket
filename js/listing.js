@@ -1,6 +1,14 @@
 const conditionLabels = { new: 'New', like_new: 'Like new', good: 'Good', fair: 'Fair' };
 const categoryLabels = { textbook: 'Textbook', lab_equipment: 'Lab equipment' };
 const methodLabels = { jazzcash: 'JazzCash', easypaisa: 'EasyPaisa' };
+const reasonLabels = {
+  scam: 'Scam or fake',
+  wrong_information: 'Wrong information',
+  inappropriate: 'Inappropriate content',
+  copyright: 'Copyrighted material',
+  not_study_related: 'Not study related',
+  other: 'Other'
+};
 
 // Bhari library sirf zaroorat par load hoti hai
 const scriptCache = {};
@@ -63,7 +71,7 @@ async function checkProof(file, price) {
 function renderPayBox(section, listing, account, user) {
   section.innerHTML = `
     <div class="pay-box">
-      <h3>Buy these notes: Rs. ${listing.price}</h3>
+      <h3>Buy these notes</h3>
       <ol class="pay-steps">
         <li>Send Rs. ${listing.price} to this ${methodLabels[account.method]} account:
           <div class="pay-info">
@@ -148,19 +156,69 @@ function renderPayBox(section, listing, account, user) {
   });
 }
 
+// Report button (apni listing par nahi, aur ek user ek hi baar)
+async function renderReportSection(listing) {
+  const section = document.getElementById('reportSection');
+  if (!section) return;
+
+  const { data } = await supabaseClient.auth.getSession();
+  const user = data.session ? data.session.user : null;
+  if (!user || user.id === listing.seller_id) return;
+
+  const { data: existing } = await supabaseClient
+    .from('reports').select('id')
+    .eq('listing_id', listing.id).eq('reporter_id', user.id).limit(1);
+  if (existing && existing.length > 0) {
+    section.innerHTML = '<p class="note">You reported this listing. Thank you, an admin will review it.</p>';
+    return;
+  }
+
+  section.innerHTML = `
+    <button class="link-btn" id="reportOpen">Report this listing</button>
+    <div class="report-form" id="reportForm" style="display:none">
+      <select id="reportReason">
+        ${Object.entries(reasonLabels).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}
+      </select>
+      <textarea id="reportDetails" rows="3" placeholder="Tell us what is wrong (optional)"></textarea>
+      <button class="btn btn-small btn-danger" id="reportSend">Send report</button>
+      <p class="message" id="reportMsg"></p>
+    </div>`;
+
+  document.getElementById('reportOpen').addEventListener('click', () => {
+    const f = document.getElementById('reportForm');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  });
+
+  document.getElementById('reportSend').addEventListener('click', async () => {
+    const msg = document.getElementById('reportMsg');
+    msg.textContent = 'Sending...';
+    const { error } = await supabaseClient.from('reports').insert({
+      listing_id: listing.id,
+      reporter_id: user.id,
+      reason: document.getElementById('reportReason').value,
+      details: document.getElementById('reportDetails').value.trim()
+    });
+    if (error) {
+      msg.textContent = error.code === '23505' ? 'You already reported this listing.' : error.message;
+      return;
+    }
+    section.innerHTML = '<p class="note">Report sent. Thank you, an admin will review it.</p>';
+  });
+}
+
 async function renderRequestSection(listing) {
   const section = document.getElementById('requestSection');
   const { data } = await supabaseClient.auth.getSession();
   const user = data.session ? data.session.user : null;
 
   if (!user) {
-    section.innerHTML = '<p class="muted">Please <a href="login.html">login</a> to buy or request these notes.</p>';
+    section.innerHTML = '<p class="muted" style="margin-top:12px">Please <a href="login.html">login</a> to buy or request these notes.</p>';
     return;
   }
 
   // Seller apni file khud download kar sakta hai
   if (user.id === listing.seller_id) {
-    section.innerHTML = '<p class="muted">This is your listing.</p>'
+    section.innerHTML = '<p class="muted" style="margin-top:12px">This is your listing.</p>'
       + (listing.file_path ? downloadHtml('Download your file') : '');
     if (listing.file_path) attachDownload(listing.file_path);
     return;
@@ -185,7 +243,7 @@ async function renderRequestSection(listing) {
     return;
   }
   if (listing.status !== 'available') {
-    section.innerHTML = '<p class="muted">This item is no longer available.</p>';
+    section.innerHTML = '<p class="muted" style="margin-top:12px">This item is no longer available.</p>';
     return;
   }
 
@@ -198,7 +256,7 @@ async function renderRequestSection(listing) {
       .eq('user_id', listing.seller_id)
       .maybeSingle();
     if (!account) {
-      section.innerHTML = '<p class="muted">The seller has not added a payment account yet, so this item cannot be bought right now.</p>';
+      section.innerHTML = '<p class="muted" style="margin-top:12px">The seller has not added a payment account yet, so this item cannot be bought right now.</p>';
       return;
     }
     renderPayBox(section, listing, account, user);
@@ -268,7 +326,8 @@ async function loadListing() {
 
   const price = data.exchange_only ? 'Exchange only' : `Rs. ${data.price ?? '-'}`;
   const sellerName = data.profiles ? data.profiles.full_name : 'Unknown';
-  const sellerDept = data.profiles && data.profiles.department ? ` (${escapeHtml(data.profiles.department)})` : '';
+  const sellerDept = data.profiles && data.profiles.department ? escapeHtml(data.profiles.department) : 'Student';
+  const initial = (sellerName || '?').trim().charAt(0).toUpperCase();
 
   const gallery = data.listing_images.length > 0
     ? data.listing_images.map((img, i) =>
@@ -281,28 +340,40 @@ async function loadListing() {
     : '';
 
   box.innerHTML = `
-    <h1>${escapeHtml(data.title)}</h1>
-    <p class="course">${escapeHtml(data.course_code)}</p>
-    <p>
-      <span class="tag">${conditionLabels[data.condition]}</span>
-      <span class="tag">${categoryLabels[data.category]}</span>
-    </p>
-    <p class="price big">${price}</p>
+    <div class="detail-grid">
+      <div class="detail-main">
+        <h1>${escapeHtml(data.title)}</h1>
+        <p class="course muted">${escapeHtml(data.course_code)}</p>
+        <p>
+          <span class="tag">${conditionLabels[data.condition]}</span>
+          <span class="tag">${categoryLabels[data.category]}</span>
+        </p>
 
-    <h3 class="section-title">Preview</h3>
-    <div class="gallery">${gallery}</div>
-    ${fileNote}
+        <h3 class="section-title">Preview</h3>
+        <div class="gallery">${gallery}</div>
+        ${fileNote}
 
-    <h3 class="section-title">Description</h3>
-    <p>${escapeHtml(data.description).replace(/\n/g, '<br>') || 'No description.'}</p>
+        <h3 class="section-title">Description</h3>
+        <p>${escapeHtml(data.description).replace(/\n/g, '<br>') || 'No description.'}</p>
+      </div>
 
-    <h3 class="section-title">Seller</h3>
-    <p>${escapeHtml(sellerName)}${sellerDept}</p>
-
-    <div id="requestSection"></div>
+      <aside class="detail-side">
+        <div class="side-card">
+          <p class="price big">${price}</p>
+          <p class="muted">${data.file_path ? 'Full PDF, released after payment or approval' : 'Meet the seller to exchange'}</p>
+          <div id="requestSection"></div>
+          <div id="reportSection"></div>
+          <div class="seller-box">
+            <span class="avatar">${escapeHtml(initial)}</span>
+            <div><strong>${escapeHtml(sellerName)}</strong><br><span class="muted">${sellerDept}</span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
   `;
 
   renderRequestSection(data);
+  renderReportSection(data);
 }
 
 loadListing();
