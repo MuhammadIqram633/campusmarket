@@ -84,7 +84,6 @@ sellerBtn.addEventListener('click', async () => {
   profile.is_seller = update.is_seller;
   render();
 
-  // Sell dabane par yahan aaye the to enable hote hi wapas bhej do
   const next = new URLSearchParams(window.location.search).get('next');
   if (profile.is_seller && next === 'sell') {
     window.location.href = 'create-listing.html';
@@ -93,7 +92,6 @@ sellerBtn.addEventListener('click', async () => {
   msg.textContent = profile.is_seller ? 'Selling enabled.' : 'Selling disabled.';
 });
 
-// Payment account save karna
 document.getElementById('paySave').addEventListener('click', async () => {
   payMsg.textContent = '';
   const number = payNumber.value.trim();

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sell an Item - CampusMarket</title>
+  <link rel="preconnect" href="https://dcgkdivastmgigmxcwua.supabase.co">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body style="visibility:hidden">
@@ -59,8 +60,14 @@
         <div class="form-group">
           <label for="fileInput">Photo or notes (PDF, JPG, PNG, WebP)</label>
           <input type="file" id="fileInput" accept="application/pdf,image/jpeg,image/png,image/webp">
-          <small>The first 3 pages are shown publicly as a preview. The full PDF stays private and is released only when you accept a buyer's request.</small>
+          <small>PDF: the first 3 pages are public as a preview, and the full file is released after payment or approval. The same PDF can be uploaded at most 3 times on this site. Photos are fully public and are meant for physical items.</small>
           <img id="preview" alt="Preview" style="display:none; max-width:100%; margin-top:8px; border:1px solid #ddd;">
+        </div>
+        <div class="form-group">
+          <label class="terms">
+            <input type="checkbox" id="copyrightCheck">
+            I confirm that this item is related to study, and that I own it or have the right to share it. I understand that reported listings can be hidden by an admin.
+          </label>
         </div>
         <button type="submit" class="btn">Post listing</button>
         <p class="message" id="message"></p>
@@ -69,12 +76,12 @@
   </main>
 
   <footer class="footer">CampusMarket - Zynvex Virtual Internship Project</footer>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="js/supabaseClient.js"></script>
-<script src="js/nav.js"></script>
-<script src="js/auth.js"></script>
-<script>window.loginCheck = requireLogin({ seller: true });</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="js/create-listing.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/auth.js"></script>
+  <script>window.loginCheck = requireLogin({ seller: true });</script>
+  <script src="js/nav.js"></script>
+  <script src="js/create-listing.js"></script>
 </body>
 </html>

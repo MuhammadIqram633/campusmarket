@@ -28,7 +28,6 @@ async function loadNotifications() {
       <small>${new Date(n.created_at).toLocaleString()}</small>
     </a>`).join('');
 
-  // Page dekh li, to sab ko "read" mark kar do
   const unreadIds = data.filter(n => !n.is_read).map(n => n.id);
   if (unreadIds.length > 0) {
     await supabaseClient.from('notifications').update({ is_read: true }).in('id', unreadIds);
@@ -36,7 +35,6 @@ async function loadNotifications() {
   }
 }
 
-// Page khula ho aur naya notification aaye to list khud refresh ho
 window.onNewNotification = loadNotifications;
 
 window.loginCheck.then(user => {

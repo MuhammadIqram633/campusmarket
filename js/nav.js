@@ -1,4 +1,3 @@
-// Popup: "Sell karna hai to pehle profile mein enable karein"
 function showSellerPopup() {
   if (document.getElementById('sellerPopup')) return;
   const overlay = document.createElement('div');
@@ -17,7 +16,6 @@ function showSellerPopup() {
   document.getElementById('popupClose').addEventListener('click', () => overlay.remove());
 }
 
-// Chhota popup (toast) jo kuch second baad khud chala jata hai
 function showToast(message, link) {
   let box = document.getElementById('toastBox');
   if (!box) {
@@ -57,7 +55,6 @@ function setBadge(n) {
   badge.style.display = n > 0 ? 'inline-block' : 'none';
 }
 
-// Unread ginti, aur naye notification ka live popup
 async function setupNotifications(userId) {
   async function recount() {
     const { count } = await supabaseClient
@@ -111,7 +108,6 @@ async function setupNotifications(userId) {
 
   const links = [{ text: 'Home', href: 'index.html' }];
 
-  // Sell: login buyer ko popup, seller ko sell page
   if (loggedIn && !isSeller) {
     links.push({ text: 'Sell', href: '#', popup: true });
   } else {
@@ -130,7 +126,6 @@ async function setupNotifications(userId) {
     links.push({ text: 'Register', href: 'register.html' });
   }
 
-  // Jis page par hain uska naam (jaise "requests.html")
   const currentPage = window.location.pathname.split('/').pop() || 'index.html';
 
   ul.innerHTML = '';

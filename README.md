@@ -26,7 +26,7 @@ Students struggle to find affordable used textbooks and lab equipment, and there
 |---|---|---|---|
 | Module 1 | Oct 26 - Nov 01 | Setup, database design, authentication | Completed |
 | Module 2 | Nov 02 - Nov 08 | Listings, requests, payments | Completed |
-| Module 3 | Nov 09 - Nov 15 | Search, filters, safety reporting, polish | In progress |
+| Module 3 | Nov 09 - Nov 15 | Search, filters, safety reporting, polish | Completed |
 | Module 4 | Nov 16 - Nov 22 | Testing, deployment, documentation | Planned |
 
 ## Module 1: what was completed
@@ -118,34 +118,47 @@ Safety rules in the database:
 - The screenshot check is only an estimate. A real payment cannot be verified without access to the seller's wallet or a paid payment API, so the seller must confirm the money in their own JazzCash or EasyPaisa app. The **Payment not received** button exists for this reason.
 - Study-related content is controlled through the seller rules, the report tool planned for Module 3, and admin review.
 
-## Module 3: search, filters and safety (in progress)
+## Module 3: search, filters and safety (completed)
 
-Completed so far:
+### Features
 
 - **Search:** visitors search by course code (partial codes such as "CS" work), title and description. Results update while typing, and the search is not case sensitive.
-- **Filters:** condition, category, price range and an exchange-only option.
-- **Sorting:** newest first, price low to high, price high to low.
-- **Load more:** listings load 12 at a time, with a counter such as "Showing 12 of 30 listings". Helpful messages are shown when nothing matches.
-- **Navigation polish:** navigation links change color on hover and click, and the link of the current page is highlighted.
+- **Filters and quick chips:** condition, category, price range and exchange-only, with quick chips for Textbooks, Lab equipment, PDF notes and Exchange only. Advanced filters open from a Filters button that shows how many are active.
+- **Sorting and paging:** newest first, price low to high, price high to low. Listings load 12 at a time with a counter and a Load more button, and skeleton cards are shown while loading.
+- **In-app notifications:** sellers get a live popup and a counter when someone sends a request or payment, and buyers are notified when a request is accepted, declined or completed. Notifications are created by database triggers, so they cannot be faked.
+- **Report button:** any logged-in user can report someone else's listing (scam, wrong information, inappropriate, copyrighted material, not study related, other), once per listing.
+- **Admin page:** admins review reports and hide, dismiss or restore listings. The seller is notified when a listing is hidden, and only an admin can restore it. Admin rights are stored in the database and checked by it.
+- **Copyright confirmation:** every new listing needs a tick confirming that the item is study related and that the seller has the right to share it. The database rejects a listing without it.
+- **Upload limit for the same file:** the browser calculates a SHA-256 fingerprint of each PDF, and the same PDF can be uploaded at most 3 times. A database trigger enforces the limit.
+- **Edit listing:** sellers change the title, course code, category, condition, price and description of their own listings.
+- **New design:** a new responsive theme with a hero section, listing cards that show the course code on a colored background, a two-column listing page, and a role-based navigation bar that highlights the current page.
 
-Still to do in this module:
+### Limitations
 
-- Report button and admin review page
-- Limit on how many times the same file can be uploaded
-- Copyright confirmation on every listing, and a study-relevance check for uploads
-- Edit listing page
-- Exchange flow where a buyer offers their own notes (stretch goal)
+- The upload limit catches only identical files. A PDF with even a small change has a different fingerprint.
+- Study-related content cannot be checked fully automatically. It is handled by the seller confirmation, user reports and admin review.
+- Notifications work inside the website only. Email or phone alerts would need a server or a paid service.
+- The payment screenshot check is an estimate, and the seller confirms the real payment in their JazzCash or EasyPaisa app.
+
+### Future work
+
+- Exchange flow where a buyer offers their own notes in return
+- Email notifications
+- Replace the uploaded file of an existing listing
 
 ## Project structure
 
 ```
 campusmarket/
-  index.html               home page with live listings
-  listing.html             listing detail, buy and request
+  index.html               home page: search, chips, filters, listings
+  listing.html             listing detail, buy, request and report
   create-listing.html      sell page
+  edit-listing.html        edit a listing
   my-listings.html         seller dashboard
   requests.html            requests received and sent, payment review
+  notifications.html       notification list
   profile.html             profile, seller mode, payment account
+  admin.html               report review for admins
   login.html
   register.html
   css/
@@ -153,17 +166,20 @@ campusmarket/
   js/
     supabaseClient.js      connects the website to Supabase
     auth.js                login check for protected pages
-    nav.js                 role-based navigation bar and seller popup
-    register.js            registration logic
-    login.js               login logic
-    home.js                loads listings, card buttons, downloads
-    listing.js             detail page, payment box, OCR check
-    create-listing.js      sell form, PDF previews and uploads
-    my-listings.js         status change and delete
-    requests.js            request management and payment review
-    profile.js             seller mode and payment account
+    nav.js                 navigation bar, seller popup, notifications
+    register.js
+    login.js
+    home.js                search, filters, cards, downloads
+    listing.js             detail page, payment box, OCR check, report
+    create-listing.js      sell form, PDF previews, file fingerprint
+    edit-listing.js
+    my-listings.js
+    requests.js
+    notifications.js
+    profile.js
+    admin.js
   database/
-    schema.sql             tables, validation rules, storage and security policies
+    schema.sql             tables, validation rules, storage, triggers and security policies
   images/
   screenshots/             screenshots used in this README
   README.md
@@ -196,7 +212,7 @@ campusmarket/
 
 ### Module 2
 
- Remove these comment markers once all these files are in the screenshots folder.
+<!-- Remove these comment markers once all these files are in the screenshots folder.
 
 #### Home page with live listings
 ![Home listings](screenshots/home-listings.png)
@@ -219,22 +235,37 @@ campusmarket/
 #### Storage buckets in Supabase
 ![Supabase storage](screenshots/supabase-storage.png)
 
-
+-->
 
 ### Module 3
 
- Remove these comment markers once all these files are in the screenshots folder.
 
-#### Search and filters
-![Search and filters](screenshots/search-filters.png)
+
+#### Home page with hero, chips and listings
+![Home hero](screenshots/home-hero.png)
 
 #### Search results for a course code
 ![Search results](screenshots/search-results.png)
 
-#### Navigation bar with the current page highlighted
-![Navigation bar](screenshots/navbar-active.png)
+#### Filters panel
+![Search and filters](screenshots/search-filters.png)
 
+#### Notifications
+![Notifications](screenshots/notifications.png)
 
+#### Report a listing
+![Report button](screenshots/report-button.png)
 
-2 Days Littel Work to Manage  Projects
+#### Admin review page
+![Admin reports](screenshots/admin-reports.png)
+
+#### Copyright confirmation on the Sell page
+![Copyright checkbox](screenshots/copyright-checkbox.png)
+
+#### Upload limit for the same file
+![File limit](screenshots/file-limit.png)
+
+#### Edit listing
+![Edit listing](screenshots/edit-listing.png)
+
 

@@ -6,7 +6,6 @@ async function requireLogin(options = {}) {
       return null;
     }
 
-    // Sell page ke liye: seller mode enable hona zaroori hai
     if (options.seller) {
       const { data: profile } = await supabaseClient
         .from('profiles').select('is_seller').eq('id', data.session.user.id).maybeSingle();

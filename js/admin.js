@@ -68,7 +68,6 @@ async function loadReports() {
   }).join('');
 }
 
-// Open ya All
 document.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => {
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
   chip.classList.add('active');
@@ -76,7 +75,6 @@ document.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click'
   loadReports();
 }));
 
-// Hide, Dismiss, Restore
 box.addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
@@ -106,7 +104,6 @@ box.addEventListener('click', async (e) => {
   loadReports();
 });
 
-// Sirf admin andar aa sakta hai
 window.loginCheck.then(async (user) => {
   if (!user) return;
   const { data } = await supabaseClient.from('profiles').select('role').eq('id', user.id).maybeSingle();

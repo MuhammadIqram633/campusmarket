@@ -10,7 +10,6 @@ const reasonLabels = {
   other: 'Other'
 };
 
-// Bhari library sirf zaroorat par load hoti hai
 const scriptCache = {};
 function loadScript(src) {
   if (!scriptCache[src]) {
@@ -35,7 +34,6 @@ function downloadHtml(label) {
   return `<button class="btn" id="downloadBtn">${label}</button><p class="message" id="dlMsg"></p>`;
 }
 
-// 60 second ka temporary link (storage policy khud check karti hai ke haq hai ya nahi)
 function attachDownload(filePath) {
   const btn = document.getElementById('downloadBtn');
   const msg = document.getElementById('dlMsg');
@@ -53,7 +51,6 @@ function attachDownload(filePath) {
   });
 }
 
-// Screenshot se amount parhna (OCR). Ye sirf andaza hai, pakka saboot nahi.
 async function checkProof(file, price) {
   try {
     await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
@@ -67,7 +64,6 @@ async function checkProof(file, price) {
   }
 }
 
-// Paid notes ka payment box
 function renderPayBox(section, listing, account, user) {
   section.innerHTML = `
     <div class="pay-box">
@@ -156,7 +152,6 @@ function renderPayBox(section, listing, account, user) {
   });
 }
 
-// Report button (apni listing par nahi, aur ek user ek hi baar)
 async function renderReportSection(listing) {
   const section = document.getElementById('reportSection');
   if (!section) return;
@@ -216,7 +211,6 @@ async function renderRequestSection(listing) {
     return;
   }
 
-  // Seller apni file khud download kar sakta hai
   if (user.id === listing.seller_id) {
     section.innerHTML = '<p class="muted" style="margin-top:12px">This is your listing.</p>'
       + (listing.file_path ? downloadHtml('Download your file') : '');
@@ -224,7 +218,6 @@ async function renderRequestSection(listing) {
     return;
   }
 
-  // Is buyer ki is listing par saari requests
   const { data: mine } = await supabaseClient
     .from('requests')
     .select('status')
@@ -247,7 +240,6 @@ async function renderRequestSection(listing) {
     return;
   }
 
-  // Price wali PDF: payment box
   const isPaid = listing.file_path && !listing.exchange_only && listing.price != null;
   if (isPaid) {
     const { data: account } = await supabaseClient
@@ -263,7 +255,6 @@ async function renderRequestSection(listing) {
     return;
   }
 
-  // Baqi sab (exchange ya physical item): normal request
   section.innerHTML = `
     <div class="request-box">
       <h3>Send a request</h3>

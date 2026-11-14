@@ -22,10 +22,8 @@ const chips = document.querySelectorAll('.chip');
 const filterPanel = document.getElementById('filters');
 const filterToggle = document.getElementById('filterToggle');
 
-// Panel kholna ya band karna
 filterToggle.addEventListener('click', () => filterPanel.classList.toggle('open'));
 
-// "Filters (2)": panel ke kitne filters lage hain
 function updateFilterCount() {
   const n = [condFilter.value, catFilter.value, minPrice.value, maxPrice.value]
     .filter(Boolean).length
@@ -40,7 +38,6 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Course code se rang banata hai, taake har card ka placeholder alag nazar aaye
 function hueFor(text) {
   let h = 0;
   for (const ch of String(text || 'x')) h = (h * 31 + ch.charCodeAt(0)) % 360;
@@ -57,7 +54,6 @@ function skeletonHtml(n) {
     </div>`).join('');
 }
 
-// Kaun login hai, aur kin listings ki request accept ho chuki hai
 async function getUserInfo() {
   const { data: s } = await supabaseClient.auth.getSession();
   if (!s.session) return { userId: null, accepted: new Set() };
@@ -122,14 +118,12 @@ function hasFilters() {
     || minPrice.value || maxPrice.value || exchFilter.checked || pdfOnly);
 }
 
-// Filters ke mutabiq database query banata hai
 function buildQuery() {
   let q = supabaseClient
     .from('listings')
     .select('*, listing_images(image_url, created_at)', { count: 'exact' })
     .eq('status', 'available');
 
-  // Search: comma, bracket aur % hata dete hain taake query na toote
   const text = searchInput.value.trim().replace(/[,()%*]/g, ' ').replace(/\s+/g, ' ').trim();
   if (text) {
     q = q.or(`title.ilike.%${text}%,course_code.ilike.%${text}%,description.ilike.%${text}%`);
@@ -151,7 +145,6 @@ function buildQuery() {
   return q;
 }
 
-// Filters ke hisaab se kaun sa chip roshan ho
 function syncChips() {
   let active = null;
   if (!condFilter.value && !minPrice.value && !maxPrice.value && !searchInput.value.trim()) {
@@ -185,7 +178,7 @@ async function loadListings(reset) {
   await userReady;
   const { data, error, count } = await queryPromise;
 
-  if (myId !== requestId) return; // naya search shuru ho chuka hai, purana jawab chhor do
+  if (myId !== requestId) return;
 
   if (reset) grid.innerHTML = '';
 
@@ -208,7 +201,6 @@ async function loadListings(reset) {
   loadMoreBtn.style.display = loaded < count ? 'inline-block' : 'none';
 }
 
-// Search typing ke 0.35 second baad chalta hai
 let timer;
 searchInput.addEventListener('input', () => {
   clearTimeout(timer);
@@ -238,7 +230,6 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   loadListings(true);
 });
 
-// Chips: tez filters
 chips.forEach(chip => chip.addEventListener('click', () => {
   resetFilters();
   const type = chip.dataset.chip;
@@ -251,7 +242,6 @@ chips.forEach(chip => chip.addEventListener('click', () => {
 
 loadMoreBtn.addEventListener('click', () => loadListings(false));
 
-// Card par Download notes ka button
 grid.addEventListener('click', async (e) => {
   const btn = e.target.closest('.dl-btn');
   if (!btn) return;

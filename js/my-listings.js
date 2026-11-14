@@ -25,7 +25,7 @@ async function loadMyListings() {
 
   box.innerHTML = data.map(item => {
     const price = item.exchange_only ? 'Exchange only' : `Rs. ${item.price ?? '-'}`;
-    // Admin ne hide ki ho to seller status nahi badal sakta
+
     const statusControl = item.status === 'hidden'
       ? '<span class="tag">Hidden by admin</span>'
       : `<select data-id="${item.id}" class="status-select">
@@ -41,13 +41,13 @@ async function loadMyListings() {
         </div>
         <div class="my-actions">
           ${statusControl}
+          <a class="btn btn-small btn-grey" href="edit-listing.html?id=${item.id}">Edit</a>
           <button class="btn btn-small btn-danger delete-btn" data-id="${item.id}">Delete</button>
         </div>
       </div>`;
   }).join('');
 }
 
-// Status badalna
 box.addEventListener('change', async (e) => {
   if (!e.target.classList.contains('status-select')) return;
   const { error } = await supabaseClient
@@ -57,7 +57,6 @@ box.addEventListener('change', async (e) => {
   if (error) alert('Could not update status: ' + error.message);
 });
 
-// Delete karna
 box.addEventListener('click', async (e) => {
   if (!e.target.classList.contains('delete-btn')) return;
   if (!confirm('Delete this listing? This cannot be undone.')) return;

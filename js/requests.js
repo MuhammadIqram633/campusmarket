@@ -12,7 +12,6 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString();
 }
 
-// Automatic screenshot jaanch ka natija
 function checkHtml(r) {
   if (r.proof_check === 'amount_matched') {
     return `<p class="check check-ok">Automatic check: the amount Rs. ${r.amount} was found in the screenshot.</p>`;
@@ -59,7 +58,6 @@ function receivedActions(r) {
   return '';
 }
 
-// Mujhe aayi hui requests (meri listings par)
 async function loadReceived() {
   const box = document.getElementById('received');
 
@@ -96,7 +94,6 @@ async function loadReceived() {
   }).join('');
 }
 
-// Meri bheji hui requests
 async function loadSent() {
   const box = document.getElementById('sent');
 
@@ -129,9 +126,7 @@ async function loadSent() {
     </div>`).join('');
 }
 
-// Buttons: Accept, Decline, Completed, Payment not received, aur screenshot dekhna
 document.getElementById('received').addEventListener('click', async (e) => {
-  // Screenshot dekhna
   const proofBtn = e.target.closest('.proof-btn');
   if (proofBtn) {
     const area = document.getElementById('proof-' + proofBtn.dataset.id);
@@ -154,7 +149,6 @@ document.getElementById('received').addEventListener('click', async (e) => {
     return;
   }
 
-  // Status ke buttons
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
 
