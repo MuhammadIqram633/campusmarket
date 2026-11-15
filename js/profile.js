@@ -12,6 +12,7 @@ const payMethod = document.getElementById('payMethod');
 const payNumber = document.getElementById('payNumber');
 const payName = document.getElementById('payName');
 const payMsg = document.getElementById('payMsg');
+const payAuto = document.getElementById('payAuto');
 
 function render() {
   document.getElementById('pName').textContent = profile.full_name;
@@ -35,13 +36,14 @@ function render() {
 async function loadPayment() {
   const { data } = await supabaseClient
     .from('payment_accounts')
-    .select('method, account_number, account_name')
+    .select('method, account_number, account_name, auto_release')
     .eq('user_id', currentUser.id)
     .maybeSingle();
   if (data) {
     payMethod.value = data.method;
     payNumber.value = data.account_number;
     payName.value = data.account_name;
+    payAuto.checked = data.auto_release;
   }
 }
 
@@ -108,7 +110,7 @@ document.getElementById('paySave').addEventListener('click', async () => {
 
   payMsg.textContent = 'Saving...';
   const { error } = await supabaseClient.from('payment_accounts').upsert(
-    { user_id: currentUser.id, method: payMethod.value, account_number: number, account_name: name },
+    { user_id: currentUser.id, method: payMethod.value, account_number: number, account_name: name, auto_release: payAuto.checked },
     { onConflict: 'user_id' }
   );
   payMsg.textContent = error ? error.message : 'Payment account saved.';

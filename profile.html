@@ -55,6 +55,12 @@
           <label for="payName">Account name</label>
           <input type="text" id="payName" placeholder="Name shown in your wallet">
         </div>
+        <div class="form-group">
+          <label class="terms">
+            <input type="checkbox" id="payAuto" checked>
+            Release the file automatically when the payment screenshot passes all checks (amount, Transaction ID and my account number). If this is off, I approve every payment myself.
+          </label>
+        </div>
         <button class="btn" id="paySave">Save payment account</button>
         <p class="message" id="payMsg"></p>
       </div>

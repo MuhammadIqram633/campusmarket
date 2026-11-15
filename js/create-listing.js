@@ -2,6 +2,7 @@ let currentUser = null;
 let previewBlobs = [];
 let selectedFile = null;
 let fileHash = null;
+let fileBlocked = false;
 
 window.loginCheck.then(user => { currentUser = user; });
 
@@ -57,6 +58,7 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
   previewBlobs = [];
   selectedFile = null;
   fileHash = null;
+  fileBlocked = false;
   preview.style.display = 'none';
   if (!file) return;
 
@@ -80,7 +82,8 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
       fileHash = await sha256(file);
       const { data: count } = await supabaseClient.rpc('count_file_uploads', { p_hash: fileHash });
       if (count >= 3) {
-        message.textContent = 'This file has already been uploaded 3 times, which is the limit. Please upload a different file.';
+        fileBlocked = true;
+        message.textContent = 'This file has already been uploaded 3 times, which is the limit. Please choose a different file.';
         e.target.value = '';
         fileHash = null;
         return;
@@ -109,6 +112,10 @@ document.getElementById('listingForm').addEventListener('submit', async (e) => {
 
   if (!currentUser) {
     message.textContent = 'Please login first.';
+    return;
+  }
+  if (fileBlocked) {
+    message.textContent = 'The file you chose has reached the upload limit. Please choose a different file before posting.';
     return;
   }
   if (!document.getElementById('copyrightCheck').checked) {
@@ -190,5 +197,6 @@ document.getElementById('listingForm').addEventListener('submit', async (e) => {
   previewBlobs = [];
   selectedFile = null;
   fileHash = null;
+  fileBlocked = false;
   setTimeout(() => { window.location.href = 'index.html'; }, 1500);
 });

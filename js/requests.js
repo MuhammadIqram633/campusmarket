@@ -13,10 +13,16 @@ function formatDate(value) {
 }
 
 function checkHtml(r) {
-  if (r.proof_check === 'amount_matched') {
-    return `<p class="check check-ok">Automatic check: the amount Rs. ${r.amount} was found in the screenshot.</p>`;
+  const c = r.proof_check || '';
+  if (c === 'verified' || c === 'amount_matched') {
+    return `<p class="check check-ok">Automatic check passed: the amount Rs. ${r.amount}${c === 'verified' ? ', the Transaction ID and your account number were' : ' was'} found in the screenshot.</p>`;
   }
-  if (r.proof_check === 'amount_not_found') {
+  if (c.startsWith('partial:')) {
+    const parts = Object.fromEntries(c.slice(8).split(',').map(p => p.split('=')));
+    const label = (ok, text) => `${ok === '1' ? 'found' : 'NOT found'}: ${text}`;
+    return `<p class="check check-warn">Automatic check: ${label(parts.amount, 'amount Rs. ' + r.amount)}; ${label(parts.txn, 'Transaction ID')}; ${label(parts.receiver, 'your account number')}. Please verify carefully.</p>`;
+  }
+  if (c === 'amount_not_found') {
     return `<p class="check check-warn">Automatic check: the amount Rs. ${r.amount} was NOT found in the screenshot. Please verify carefully.</p>`;
   }
   return '<p class="check check-warn">Automatic check: the screenshot could not be read. Please verify manually.</p>';

@@ -444,3 +444,85 @@ drop trigger if exists trg_protect_hidden on listings;
 create trigger trg_protect_hidden
   before update of status on listings
   for each row execute function protect_hidden();
+
+create or replace function require_hash_for_file() returns trigger
+language plpgsql as $$
+begin
+  if new.file_path is not null and new.file_hash is null then
+    raise exception 'A file fingerprint is required for listings with a PDF.';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_require_hash on listings;
+create trigger trg_require_hash
+  before update of file_path on listings
+  for each row execute function require_hash_for_file();
+
+alter table requests add column if not exists proof_hash text;
+create unique index if not exists requests_proof_hash_idx on requests (proof_hash) where proof_hash is not null;
+alter table payment_accounts add column if not exists auto_release boolean not null default true;
+
+drop function if exists submit_payment_request(uuid, text, text, text, text, text);
+
+create or replace function submit_payment_request(
+  p_listing_id uuid,
+  p_message text,
+  p_meeting_note text,
+  p_transaction_id text,
+  p_proof_path text,
+  p_proof_check text,
+  p_proof_hash text
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_listing listings%rowtype;
+  v_method text;
+  v_auto boolean;
+  v_id uuid;
+  v_status text;
+begin
+  if auth.uid() is null then
+    raise exception 'Please login first.';
+  end if;
+
+  select * into v_listing from listings where id = p_listing_id;
+  if not found then raise exception 'Listing not found.'; end if;
+  if v_listing.status <> 'available' then raise exception 'This item is no longer available.'; end if;
+  if v_listing.seller_id = auth.uid() then raise exception 'You cannot buy your own listing.'; end if;
+  if v_listing.exchange_only or v_listing.price is null then
+    raise exception 'This listing has no price. Send a normal request instead.';
+  end if;
+  if v_listing.file_path is null then raise exception 'This listing has no file to release.'; end if;
+
+  select method, auto_release into v_method, v_auto from payment_accounts where user_id = v_listing.seller_id;
+  if v_method is null then raise exception 'The seller has not added a payment account yet.'; end if;
+
+  if p_transaction_id is null
+     or length(trim(p_transaction_id)) < 8
+     or trim(p_transaction_id) !~ '^[A-Za-z0-9]+$' then
+    raise exception 'Please enter a valid transaction ID (letters and numbers, at least 8 characters).';
+  end if;
+  if p_proof_path is null or split_part(p_proof_path, '/', 1) <> auth.uid()::text then
+    raise exception 'The payment screenshot is missing.';
+  end if;
+
+  v_status := case when p_proof_check = 'verified' and v_auto then 'accepted' else 'pending' end;
+
+  insert into requests (listing_id, buyer_id, message, meeting_note, status,
+                        transaction_id, proof_path, amount, payment_method, auto_released, proof_check, proof_hash)
+  values (p_listing_id, auth.uid(), coalesce(p_message, ''), p_meeting_note, v_status,
+          trim(p_transaction_id), p_proof_path, v_listing.price, v_method,
+          (v_status = 'accepted'), p_proof_check, p_proof_hash)
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+revoke execute on function submit_payment_request(uuid, text, text, text, text, text, text) from public, anon;
+grant execute on function submit_payment_request(uuid, text, text, text, text, text, text) to authenticated;

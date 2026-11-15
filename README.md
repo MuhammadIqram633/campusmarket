@@ -239,7 +239,7 @@ campusmarket/
 
 ### Module 3
 
-
+<!-- Remove these comment markers once all these files are in the screenshots folder.
 
 #### Home page with hero, chips and listings
 ![Home hero](screenshots/home-hero.png)
@@ -250,6 +250,15 @@ campusmarket/
 #### Filters panel
 ![Search and filters](screenshots/search-filters.png)
 
+#### Notifications
+![Notifications](screenshots/notifications.png)
+
+#### Report a listing
+![Report button](screenshots/report-button.png)
+
+#### Admin review page
+![Admin reports](screenshots/admin-reports.png)
+
 #### Copyright confirmation on the Sell page
 ![Copyright checkbox](screenshots/copyright-checkbox.png)
 
@@ -259,4 +268,4 @@ campusmarket/
 #### Edit listing
 ![Edit listing](screenshots/edit-listing.png)
 
-
+-->

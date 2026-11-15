@@ -51,17 +51,77 @@ function attachDownload(filePath) {
   });
 }
 
-async function checkProof(file, price) {
+async function sha256(file) {
+  const buffer = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function normalize(text) {
+  return String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function levenshtein(a, b) {
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const temp = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = temp;
+    }
+  }
+  return row[b.length];
+}
+
+function fuzzyContains(haystack, needle, maxErrors) {
+  if (!needle) return false;
+  if (haystack.includes(needle)) return true;
+  if (maxErrors === 0) return false;
+  for (let len = needle.length - maxErrors; len <= needle.length + maxErrors; len++) {
+    for (let i = 0; i + len <= haystack.length; i++) {
+      if (levenshtein(haystack.substr(i, len), needle) <= maxErrors) return true;
+    }
+  }
+  return false;
+}
+
+async function checkProof(file, listing, account, txn) {
   try {
     await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
     const result = await Tesseract.recognize(file, 'eng');
-    const text = (result.data.text || '').replace(/,/g, '');
-    const numbers = (text.match(/\d+(\.\d+)?/g) || []).map(Number);
-    return numbers.includes(Number(price)) ? 'amount_matched' : 'amount_not_found';
+    const raw = result.data.text || '';
+    const normalized = normalize(raw);
+    if (normalized.length < 15) return { code: 'ocr_failed', found: null };
+
+    const numbers = (raw.replace(/,/g, '').match(/\d+(\.\d+)?/g) || []).map(Number);
+    const amount = numbers.includes(Number(listing.price));
+    const receiver = raw.replace(/\D/g, '').includes(account.account_number.slice(-4));
+    const txnFound = fuzzyContains(normalized, normalize(txn), txn.length >= 10 ? 1 : 0);
+
+    const code = amount && txnFound && receiver
+      ? 'verified'
+      : `partial:amount=${amount ? 1 : 0},txn=${txnFound ? 1 : 0},receiver=${receiver ? 1 : 0}`;
+    return { code, found: { amount, txnFound, receiver } };
   } catch (err) {
     console.error(err);
-    return 'ocr_failed';
+    return { code: 'ocr_failed', found: null };
   }
+}
+
+function pendingMessage(check) {
+  if (check.code === 'verified') {
+    return 'Payment proof sent. This seller approves payments manually, so the file is released after the seller confirms.';
+  }
+  if (!check.found) {
+    return 'Payment proof sent. We could not read the screenshot, so the seller will check it and release the file.';
+  }
+  const missing = [];
+  if (!check.found.amount) missing.push('the amount');
+  if (!check.found.txnFound) missing.push('the Transaction ID');
+  if (!check.found.receiver) missing.push("the seller's number");
+  return `Payment proof sent. The screenshot did not clearly show ${missing.join(', ')}, so the seller will check it before releasing the file.`;
 }
 
 function renderPayBox(section, listing, account, user) {
@@ -76,14 +136,14 @@ function renderPayBox(section, listing, account, user) {
           </div>
         </li>
         <li>Enter the Transaction ID from your payment message.</li>
-        <li>Upload a screenshot of the payment.</li>
+        <li>Upload your own payment screenshot. It must clearly show the amount, the Transaction ID and the seller's number.</li>
       </ol>
       <input type="text" id="txnId" placeholder="Transaction ID">
       <input type="file" id="proofFile" accept="image/jpeg,image/png,image/webp">
       <textarea id="payNote" rows="2" placeholder="Message to the seller (optional)"></textarea>
       <button class="btn" id="payBtn">Submit payment</button>
       <p class="message" id="payMsg"></p>
-      <p class="note">If the amount in your screenshot matches, the download opens at once. Otherwise the seller checks your payment first.</p>
+      <p class="note">If the screenshot passes all checks and the seller allows automatic release, the download opens at once. Otherwise the seller checks your payment first. A screenshot can be used only once.</p>
     </div>`;
 
   document.getElementById('payBtn').addEventListener('click', async () => {
@@ -112,7 +172,8 @@ function renderPayBox(section, listing, account, user) {
 
     btn.disabled = true;
     msg.textContent = 'Reading the screenshot (the first time can take up to a minute)...';
-    const check = await checkProof(file, listing.price);
+    const check = await checkProof(file, listing, account, txn);
+    const proofHash = await sha256(file);
 
     msg.textContent = 'Uploading...';
     const ext = file.type.split('/')[1].replace('jpeg', 'jpg');
@@ -126,28 +187,36 @@ function renderPayBox(section, listing, account, user) {
       return;
     }
 
-    const { error } = await supabaseClient.rpc('submit_payment_request', {
+    const { data: newId, error } = await supabaseClient.rpc('submit_payment_request', {
       p_listing_id: listing.id,
       p_message: note,
       p_meeting_note: null,
       p_transaction_id: txn,
       p_proof_path: path,
-      p_proof_check: check
+      p_proof_check: check.code,
+      p_proof_hash: proofHash
     });
     if (error) {
-      msg.textContent = error.code === '23505'
-        ? 'This Transaction ID was already used.'
-        : error.message;
+      if (error.message.includes('requests_proof_hash_idx')) {
+        msg.textContent = 'This screenshot was already used for another payment. Please upload your own payment screenshot.';
+      } else if (error.code === '23505') {
+        msg.textContent = 'This Transaction ID was already used.';
+      } else {
+        msg.textContent = error.message;
+      }
       btn.disabled = false;
       return;
     }
 
-    if (check === 'amount_matched') {
-      section.innerHTML = '<p class="note">Payment recorded. Your download is ready.</p>'
+    const { data: row } = await supabaseClient
+      .from('requests').select('status').eq('id', newId).maybeSingle();
+
+    if (row && row.status === 'accepted') {
+      section.innerHTML = '<p class="note">Payment checked and recorded. Your download is ready.</p>'
         + downloadHtml('Download full notes');
       attachDownload(listing.file_path);
     } else {
-      section.innerHTML = '<p class="note">Payment proof sent. We could not confirm the amount automatically, so the seller will check it and release the file.</p>';
+      section.innerHTML = `<p class="note">${pendingMessage(check)}</p>`;
     }
   });
 }
@@ -255,7 +324,10 @@ async function renderRequestSection(listing) {
     return;
   }
 
-  section.innerHTML = `
+  const exchangeNote = listing.file_path && listing.exchange_only
+    ? '<p class="note">This is an exchange listing. Send a request and agree on the exchange with the seller.</p>'
+    : '';
+  section.innerHTML = exchangeNote + `
     <div class="request-box">
       <h3>Send a request</h3>
       <textarea id="reqMessage" rows="3" placeholder="Write a short message to the seller"></textarea>
