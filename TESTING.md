@@ -24,8 +24,8 @@ Result column: write Pass or Fail. Add a short note for every Fail and how it wa
 | T07 | Form validation | Submit the Sell form empty, then without the confirmation tick | A clear message is shown each time | Pass | |
 | T08 | Wrong file type | Choose a .docx file | The file is rejected with a message | | |
 | T09 | PDF listing | Post a listing with a PDF | 3 preview pages are created and the listing appears on the home page | Pass | it Actually show the real preview of first 3 pages |
-| T10 | Upload limit | Upload the same PDF 4 times | The 4th attempt is blocked and Post does nothing | | |
-| T11 | Edit listing | Edit the title and price in My Listings | The new values appear on the home page | | |
+| T10 | Upload limit | Upload the same PDF 4 times | The 4th attempt is blocked and Post does nothing | Pass | After 3 successfully Upload pdf 4th is rejected |
+| T11 | Edit listing | Edit the title and price in My Listings | The new values appear on the home page | Pass | Yes when i click on edit listing it become very easy to edit |
 | T12 | Edit another seller's listing | Open edit-listing.html?id= of another seller's listing | A message says only own listings can be edited | | |
 | T13 | Status and delete | Change status to Sold, then delete a listing | Status is saved and the listing is removed | | |
 
