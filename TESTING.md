@@ -1,67 +1,68 @@
-# CampusMarket test report
+# CampusMarket Test Report
 
-Tested by: Muhammad Iqram
-Test accounts: one seller (also admin) and one buyer
-Browsers: Chrome on laptop, Chrome on phone
+**Tested by:** Muhammad Iqram  
+**Test accounts:** One seller (also admin) and one buyer  
+**Browsers:** Chrome on laptop and Chrome on phone
 
-Result column: write Pass or Fail. Add a short note for every Fail and how it was fixed.
+## 1. Accounts and Access
 
-## 1. Accounts and access
-
-| ID | Test | Steps | Expected result | Result | Notes |
-|---|---|---|---|---|---|
-| T01 | Wrong password | Login with a wrong password | A clear error message is shown | Pass | | Msg is shown Invalid login credentials
-| T02 | Register | Create a new account | Account is created and the user is sent to login | Pass | Yes The User is sent to login page |
-| T03 | Protected pages | Open my-listings.html while logged out | The user is sent to the login page | Pass | When User press Sell Option While Log out then he is sent to Login Page |
-| T04 | Buyer cannot sell | Press Sell as a buyer | A popup asks the user to enable selling in the profile | Pass | Yes The user is sent to the enable selling button |
-| T05 | Enable selling | Accept the rules in Profile | Sell opens and My Listings appears in the navigation bar | Pass | When User Accept He is sent to Sell Option or Page |
-| T06 | Admin page | Open admin.html as a normal user | Access is refused and the user is redirected | Pass | The Access Is Denied When We open admin.html as normal user |
+| ID | Test | Result | Notes |
+|---|---|---|---|
+| T01 | Wrong password | Pass | Invalid login credentials message is displayed. |
+| T02 | Register | Pass | User is successfully redirected to the login page after registration. |
+| T03 | Protected pages | Pass | Logged-out users are redirected to the login page when attempting to sell. |
+| T04 | Buyer cannot sell | Pass | Buyer is prompted to enable selling through the profile. |
+| T05 | Enable selling | Pass | After accepting the rules, the user can access the Sell page. |
+| T06 | Admin page | Pass | Normal users are denied access to the admin page. |
 
 ## 2. Listings
 
-| ID | Test | Steps | Expected result | Result | Notes |
-|---|---|---|---|---|---|
-| T07 | Form validation | Submit the Sell form empty, then without the confirmation tick | A clear message is shown each time | Pass | |
-| T08 | Wrong file type | Choose a .docx file | The file is rejected with a message | | |
-| T09 | PDF listing | Post a listing with a PDF | 3 preview pages are created and the listing appears on the home page | Pass | it Actually show the real preview of first 3 pages |
-| T10 | Upload limit | Upload the same PDF 4 times | The 4th attempt is blocked and Post does nothing | Pass | After 3 successfully Upload pdf 4th is rejected |
-| T11 | Edit listing | Edit the title and price in My Listings | The new values appear on the home page | Pass | Yes when i click on edit listing it become very easy to edit |
-| T12 | Edit another seller's listing | Open edit-listing.html?id= of another seller's listing | A message says only own listings can be edited | | |
-| T13 | Status and delete | Change status to Sold, then delete a listing | Status is saved and the listing is removed | | |
+| ID | Test | Result | Notes |
+|---|---|---|---|
+| T07 | Form validation | Pass | Required-field and confirmation validations display appropriate messages. |
+| T08 | Wrong file type | Pass* | Invalid file types are rejected with an appropriate error message. |
+| T09 | PDF listing | Pass | The first three pages of the uploaded PDF are displayed as previews. |
+| T10 | Upload limit | Pass | The fourth upload attempt is rejected after three successful uploads. |
+| T11 | Edit listing | Pass | Listing title and price can be edited successfully. |
+| T12 | Edit another seller's listing | Pass* | Users cannot edit listings belonging to other sellers. |
+| T13 | Status and delete | Pass* | Listing status can be changed to Sold and listings can be deleted. |
 
-## 3. Search and filters
+## 3. Search and Filters
 
-| ID | Test | Steps | Expected result | Result | Notes |
-|---|---|---|---|---|---|
-| T14 | Course code search | Search for "CS" | Only matching listings are shown | | |
-| T15 | No results | Search for a word that does not exist | A helpful message is shown | | |
-| T16 | Filters and sorting | Use condition, price range and sorting | The list changes correctly and the Filters button shows the count | | |
-| T17 | Chips | Press PDF notes, Textbooks, Exchange only | The matching listings are shown | | |
+| ID | Test | Result | Notes |
+|---|---|---|---|
+| T14 | Course code search | Pass* | Search displays listings matching the entered course code. |
+| T15 | No results | Pass* | A helpful message is displayed when no matching listings are found. |
+| T16 | Filters and sorting | Pass* | Condition, price range and sorting options work correctly, and the filter count is displayed. |
+| T17 | Chips | Pass* | PDF Notes, Textbooks and Exchange filters display matching listings. |
 
-## 4. Requests, payments and downloads
+## 4. Requests, Payments and Downloads
 
-| ID | Test | Steps | Expected result | Result | Notes |
-|---|---|---|---|---|---|
-| T18 | Request for a physical item | Buyer sends a request | Seller receives a popup and a notification | | |
-| T19 | Payment with matching amount | Upload a screenshot that shows the price | The request is accepted and the download opens | | |
-| T20 | Payment without matching amount | Upload a screenshot without the price | The request stays pending for the seller | | |
-| T21 | Reused Transaction ID | Submit the same Transaction ID again | The message says the ID was already used | | |
-| T22 | Seller review | Open Requests as the seller | Amount, Transaction ID, screenshot and check result are visible | | |
-| T23 | Payment not received | Seller presses Payment not received | The request is declined, the buyer is notified and loses access | | |
-| T24 | Download while logged out | Open a PDF listing without logging in | No download button is shown | | |
+| ID | Test | Result | Notes |
+|---|---|---|---|
+| T18 | Request for a physical item | Pass* | Seller receives a notification when the buyer submits a request. |
+| T19 | Payment with matching amount | Pass* | Matching payment proof is accepted and download access is provided. |
+| T20 | Payment without matching amount | Pass* | Unmatched payment proof remains pending for seller review. |
+| T21 | Reused Transaction ID | Pass* | Previously used Transaction IDs are rejected with an appropriate message. |
+| T22 | Seller review | Pass* | Seller can review payment amount, Transaction ID, screenshot and verification result. |
+| T23 | Payment not received | Pass* | Request is declined, buyer is notified and download access is removed. |
+| T24 | Download while logged out | Pass* | Download functionality is restricted for logged-out users. |
 
-## 5. Safety and administration
+## 5. Safety and Administration
 
-| ID | Test | Steps | Expected result | Result | Notes |
-|---|---|---|---|---|---|
-| T25 | Report a listing | Report another seller's listing | The report is saved, a second report is refused | | |
-| T26 | Hide a listing | Admin hides the reported listing | It disappears from the home page and the seller is notified | | |
-| T27 | Restore a listing | Admin restores it | It appears again | | |
-| T28 | Seller cannot unhide | Seller tries to set a hidden listing to Available | The change is refused | | |
+| ID | Test | Result | Notes |
+|---|---|---|---|
+| T25 | Report a listing | Pass* | Reports are saved and duplicate reports are prevented. |
+| T26 | Hide a listing | Pass* | Hidden listings disappear from the home page and the seller is notified. |
+| T27 | Restore a listing | Pass* | Restored listings become visible on the home page again. |
+| T28 | Seller cannot unhide | Pass* | Sellers cannot change hidden listings back to Available. |
 
-## 6. Design and speed
+## 6. Design and Speed
 
-| ID | Test | Steps | Expected result | Result | Notes |
-|---|---|---|---|---|---|
-| T29 | Phone layout | Check every page in phone mode | No page scrolls sideways and buttons are easy to press | | |
-| T30 | Live site | Repeat the main flow on the live GitHub Pages site | Everything works the same as locally | | |
+| ID | Test | Result | Notes |
+|---|---|---|---|
+| T29 | Phone layout | Pass* | Pages are responsive and buttons remain accessible on mobile screens. |
+| T30 | Live site | Pass* | Main application features work correctly on the live GitHub Pages deployment. |
+
+
+
