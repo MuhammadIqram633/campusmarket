@@ -1,6 +1,6 @@
 async function requireLogin(options = {}) {
   try {
-    const { data } = await supabaseClient.auth.getSession();
+    const { data } = await sessionReady;
     if (!data.session) {
       window.location.replace('login.html');
       return null;
@@ -22,4 +22,8 @@ async function requireLogin(options = {}) {
     document.body.style.visibility = 'visible';
     return null;
   }
+}
+
+if (document.body && document.body.dataset.auth) {
+  window.loginCheck = requireLogin({ seller: document.body.dataset.auth === 'seller' });
 }

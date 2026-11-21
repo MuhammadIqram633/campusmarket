@@ -84,6 +84,7 @@ sellerBtn.addEventListener('click', async () => {
   }
 
   profile.is_seller = update.is_seller;
+  sessionStorage.removeItem('navFlags:' + currentUser.id);
   render();
 
   const next = new URLSearchParams(window.location.search).get('next');

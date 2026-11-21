@@ -221,12 +221,10 @@ function renderPayBox(section, listing, account, user) {
   });
 }
 
-async function renderReportSection(listing) {
+async function renderReportSection(listing, user) {
   const section = document.getElementById('reportSection');
   if (!section) return;
 
-  const { data } = await supabaseClient.auth.getSession();
-  const user = data.session ? data.session.user : null;
   if (!user || user.id === listing.seller_id) return;
 
   const { data: existing } = await supabaseClient
@@ -270,10 +268,8 @@ async function renderReportSection(listing) {
   });
 }
 
-async function renderRequestSection(listing) {
+async function renderRequestSection(listing, user) {
   const section = document.getElementById('requestSection');
-  const { data } = await supabaseClient.auth.getSession();
-  const user = data.session ? data.session.user : null;
 
   if (!user) {
     section.innerHTML = '<p class="muted" style="margin-top:12px">Please <a href="login.html">login</a> to buy or request these notes.</p>';
@@ -287,12 +283,17 @@ async function renderRequestSection(listing) {
     return;
   }
 
-  const { data: mine } = await supabaseClient
-    .from('requests')
-    .select('status')
-    .eq('listing_id', listing.id)
-    .eq('buyer_id', user.id);
-  const statuses = (mine || []).map(r => r.status);
+  const isPaid = listing.file_path && !listing.exchange_only && listing.price != null;
+  const [mineRes, accountRes] = await Promise.all([
+    supabaseClient.from('requests').select('status')
+      .eq('listing_id', listing.id).eq('buyer_id', user.id),
+    isPaid
+      ? supabaseClient.from('payment_accounts')
+          .select('method, account_number, account_name')
+          .eq('user_id', listing.seller_id).maybeSingle()
+      : Promise.resolve({ data: null })
+  ]);
+  const statuses = (mineRes.data || []).map(r => r.status);
 
   if (statuses.includes('accepted') || statuses.includes('completed')) {
     section.innerHTML = '<p class="note">The seller accepted your request.</p>'
@@ -309,13 +310,8 @@ async function renderRequestSection(listing) {
     return;
   }
 
-  const isPaid = listing.file_path && !listing.exchange_only && listing.price != null;
   if (isPaid) {
-    const { data: account } = await supabaseClient
-      .from('payment_accounts')
-      .select('method, account_number, account_name')
-      .eq('user_id', listing.seller_id)
-      .maybeSingle();
+    const account = accountRes.data;
     if (!account) {
       section.innerHTML = '<p class="muted" style="margin-top:12px">The seller has not added a payment account yet, so this item cannot be bought right now.</p>';
       return;
@@ -373,12 +369,16 @@ async function loadListing() {
     return;
   }
 
-  const { data, error } = await supabaseClient
-    .from('listings')
-    .select('*, listing_images(image_url, created_at), profiles(full_name, department)')
-    .eq('id', id)
-    .order('created_at', { referencedTable: 'listing_images', ascending: true })
-    .maybeSingle();
+  const [{ data, error }, { data: sess }] = await Promise.all([
+    supabaseClient
+      .from('listings')
+      .select('*, listing_images(image_url, created_at), profiles(full_name, department)')
+      .eq('id', id)
+      .order('created_at', { referencedTable: 'listing_images', ascending: true })
+      .maybeSingle(),
+    sessionReady
+  ]);
+  const user = sess && sess.session ? sess.session.user : null;
 
   if (error || !data) {
     box.textContent = 'Listing not found.';
@@ -435,8 +435,8 @@ async function loadListing() {
     </div>
   `;
 
-  renderRequestSection(data);
-  renderReportSection(data);
+  renderRequestSection(data, user);
+  renderReportSection(data, user);
 }
 
 loadListing();

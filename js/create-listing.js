@@ -41,12 +41,12 @@ async function makePreviews(file) {
   for (let n = 1; n <= pageCount; n++) {
     const page = await pdf.getPage(n);
     const base = page.getViewport({ scale: 1 });
-    const viewport = page.getViewport({ scale: 600 / base.width });
+    const viewport = page.getViewport({ scale: 480 / base.width });
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    blobs.push(await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8)));
+    blobs.push(await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.72)));
   }
   return blobs;
 }

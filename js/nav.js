@@ -1,3 +1,5 @@
+let unreadCount = 0;
+
 function showSellerPopup() {
   if (document.getElementById('sellerPopup')) return;
   const overlay = document.createElement('div');
@@ -49,6 +51,7 @@ function showToast(message, link) {
 }
 
 function setBadge(n) {
+  unreadCount = n;
   const badge = document.getElementById('notifBadge');
   if (!badge) return;
   badge.textContent = n > 9 ? '9+' : String(n);
@@ -84,39 +87,18 @@ async function setupNotifications(userId) {
     .subscribe();
 }
 
-(async () => {
-  const ul = document.getElementById('navLinks');
-  if (!ul) return;
-
-  let loggedIn = false;
-  let isSeller = false;
-  let isAdmin = false;
-  let userId = null;
-  try {
-    const { data } = await supabaseClient.auth.getSession();
-    loggedIn = !!data.session;
-    if (loggedIn) {
-      userId = data.session.user.id;
-      const { data: profile } = await supabaseClient
-        .from('profiles').select('is_seller, role').eq('id', userId).maybeSingle();
-      isSeller = !!(profile && profile.is_seller);
-      isAdmin = !!(profile && profile.role === 'admin');
-    }
-  } catch (err) {
-    console.error(err);
-  }
-
+function buildLinks(state) {
   const links = [{ text: 'Home', href: 'index.html' }];
 
-  if (loggedIn && !isSeller) {
+  if (state.loggedIn && !state.isSeller) {
     links.push({ text: 'Sell', href: '#', popup: true });
   } else {
     links.push({ text: 'Sell', href: 'create-listing.html' });
   }
 
-  if (loggedIn) {
-    if (isSeller) links.push({ text: 'My Listings', href: 'my-listings.html' });
-    if (isAdmin) links.push({ text: 'Admin', href: 'admin.html' });
+  if (state.loggedIn) {
+    if (state.isSeller) links.push({ text: 'My Listings', href: 'my-listings.html' });
+    if (state.isAdmin) links.push({ text: 'Admin', href: 'admin.html' });
     links.push({ text: 'Requests', href: 'requests.html' });
     links.push({ text: 'Alerts', href: 'notifications.html', bell: true });
     links.push({ text: 'Profile', href: 'profile.html' });
@@ -125,11 +107,14 @@ async function setupNotifications(userId) {
     links.push({ text: 'Login', href: 'login.html' });
     links.push({ text: 'Register', href: 'register.html' });
   }
+  return links;
+}
 
+function renderNav(ul, state) {
   const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+  const fragment = document.createDocumentFragment();
 
-  ul.innerHTML = '';
-  links.forEach(link => {
+  buildLinks(state).forEach(link => {
     const li = document.createElement('li');
     const a = document.createElement('a');
     a.textContent = link.text;
@@ -149,15 +134,59 @@ async function setupNotifications(userId) {
     if (link.logout) {
       a.addEventListener('click', async (e) => {
         e.preventDefault();
-        sessionStorage.removeItem('notifShown');
+        sessionStorage.clear();
         await supabaseClient.auth.signOut();
         window.location.href = 'index.html';
       });
     }
     li.appendChild(a);
-    ul.appendChild(li);
+    fragment.appendChild(li);
   });
-  ul.style.visibility = 'visible';
 
-  if (loggedIn) setupNotifications(userId);
+  ul.replaceChildren(fragment);
+  ul.style.visibility = 'visible';
+  setBadge(unreadCount);
+}
+
+(async () => {
+  const ul = document.getElementById('navLinks');
+  if (!ul) return;
+
+  let session = null;
+  try {
+    const { data } = await sessionReady;
+    session = data.session;
+  } catch (err) {
+    console.error(err);
+  }
+
+  const userId = session ? session.user.id : null;
+  const cacheKey = userId ? 'navFlags:' + userId : null;
+
+  let flags = { isSeller: false, isAdmin: false };
+  if (cacheKey) {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(cacheKey));
+      if (cached) flags = cached;
+    } catch (err) {
+      sessionStorage.removeItem(cacheKey);
+    }
+  }
+
+  renderNav(ul, { loggedIn: !!userId, ...flags });
+  if (!userId) return;
+
+  setTimeout(() => setupNotifications(userId), 1500);
+
+  try {
+    const { data: profile } = await supabaseClient
+      .from('profiles').select('is_seller, role').eq('id', userId).maybeSingle();
+    const fresh = { isSeller: !!(profile && profile.is_seller), isAdmin: !!(profile && profile.role === 'admin') };
+    sessionStorage.setItem(cacheKey, JSON.stringify(fresh));
+    if (fresh.isSeller !== flags.isSeller || fresh.isAdmin !== flags.isAdmin) {
+      renderNav(ul, { loggedIn: true, ...fresh });
+    }
+  } catch (err) {
+    console.error(err);
+  }
 })();

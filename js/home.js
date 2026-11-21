@@ -5,6 +5,7 @@ let user = { userId: null, accepted: new Set() };
 let page = 0;
 let loaded = 0;
 let requestId = 0;
+let totalCount = 0;
 let pdfOnly = false;
 
 const grid = document.getElementById('listingGrid');
@@ -55,7 +56,7 @@ function skeletonHtml(n) {
 }
 
 async function getUserInfo() {
-  const { data: s } = await supabaseClient.auth.getSession();
+  const { data: s } = await sessionReady;
   if (!s.session) return { userId: null, accepted: new Set() };
 
   const userId = s.session.user.id;
@@ -90,11 +91,11 @@ function actionHtml(item, user) {
   return `<a class="btn btn-small" href="${detail}">Request item</a>`;
 }
 
-function cardHtml(item) {
+function cardHtml(item, index) {
   const hue = hueFor(item.course_code || item.title);
   const badge = item.file_path ? '<span class="badge-pdf">PDF</span>' : '';
   const media = item.listing_images.length > 0
-    ? `<div class="card-img">${badge}<img src="${item.listing_images[0].image_url}" alt="" loading="lazy" decoding="async"></div>`
+    ? `<div class="card-img">${badge}<img src="${item.listing_images[0].image_url}" alt="" loading="${index < 4 ? 'eager' : 'lazy'}" decoding="async"></div>`
     : `<div class="card-img placeholder" style="background:linear-gradient(135deg,hsl(${hue} 70% 52%),hsl(${(hue + 40) % 360} 70% 42%))">${badge}<span class="ph-code">${escapeHtml(item.course_code || 'Notes')}</span></div>`;
   const price = item.exchange_only ? 'Exchange only' : `Rs. ${item.price ?? '-'}`;
   const action = actionHtml(item, user);
@@ -118,10 +119,10 @@ function hasFilters() {
     || minPrice.value || maxPrice.value || exchFilter.checked || pdfOnly);
 }
 
-function buildQuery() {
+function buildQuery(withCount) {
   let q = supabaseClient
     .from('listings')
-    .select('*, listing_images(image_url, created_at)', { count: 'exact' })
+    .select('id, seller_id, title, course_code, condition, price, exchange_only, file_path, created_at, listing_images(image_url, created_at)', withCount ? { count: 'exact' } : {})
     .eq('status', 'available');
 
   const text = searchInput.value.trim().replace(/[,()%*]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -174,7 +175,7 @@ async function loadListings(reset) {
   }
 
   const from = page * PAGE_SIZE;
-  const queryPromise = buildQuery().range(from, from + PAGE_SIZE - 1);
+  const queryPromise = Promise.resolve(buildQuery(reset).range(from, from + PAGE_SIZE - 1));
   await userReady;
   const { data, error, count } = await queryPromise;
 
@@ -194,11 +195,13 @@ async function loadListings(reset) {
     return;
   }
 
-  grid.insertAdjacentHTML('beforeend', data.map(cardHtml).join(''));
+  if (count !== null && count !== undefined) totalCount = count;
+  const offset = loaded;
+  grid.insertAdjacentHTML('beforeend', data.map((item, i) => cardHtml(item, offset + i)).join(''));
   loaded += data.length;
   page++;
-  resultInfo.textContent = `Showing ${loaded} of ${count} listings`;
-  loadMoreBtn.style.display = loaded < count ? 'inline-block' : 'none';
+  resultInfo.textContent = `Showing ${loaded} of ${totalCount} listings`;
+  loadMoreBtn.style.display = loaded < totalCount ? 'inline-block' : 'none';
 }
 
 let timer;
