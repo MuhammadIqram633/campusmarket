@@ -20,6 +20,16 @@ Students struggle to find affordable used textbooks and lab equipment, and there
 - **Payment screenshot check:** Tesseract.js OCR (runs in the browser)
 - **Hosting:** GitHub Pages (free)
 
+### Design choices
+
+- The frontend uses plain HTML, CSS and JavaScript instead of React, to keep the project simple and fast to load.
+- The site is hosted on GitHub Pages instead of Vercel. Both are free static hosts, and GitHub Pages updates itself with every push.
+- There is no payment gateway and no paid server, as the client brief requires.
+
+## Architecture
+
+![Architecture diagram](images/architecture.png)
+
 ## Project plan
 
 | Module | Dates | Focus | Status |
@@ -27,7 +37,7 @@ Students struggle to find affordable used textbooks and lab equipment, and there
 | Module 1 | Oct 26 - Nov 01 | Setup, database design, authentication | Completed |
 | Module 2 | Nov 02 - Nov 08 | Listings, requests, payments | Completed |
 | Module 3 | Nov 09 - Nov 15 | Search, filters, safety reporting, polish | Completed |
-| Module 4 | Nov 16 - Nov 22 | Testing, deployment, documentation | Planned |
+| Module 4 | Nov 16 - Nov 22 | Testing, deployment, documentation | Completed |
 
 ## Module 1: what was completed
 
@@ -104,12 +114,13 @@ The platform never handles money. Payment goes directly from buyer to seller thr
 1. The seller saves a JazzCash or EasyPaisa number in their Profile.
 2. On a paid PDF listing, the buyer sees the seller's account details and the price.
 3. The buyer pays, then enters the Transaction ID and uploads a screenshot of the payment.
-4. The browser reads the screenshot (Tesseract.js OCR) and looks for the listing price. If the amount is found, the request is accepted at once and the download opens. If not, the request waits for the seller.
-5. The seller sees the amount expected, the Transaction ID, the screenshot and the result of the automatic check. The seller can accept, or press **Payment not received**, which removes the buyer's access to the file.
+4. The browser reads the screenshot (Tesseract.js OCR) and looks for three things: the listing price, the Transaction ID that the buyer typed, and the last four digits of the seller's number. If all three are found and the seller allows automatic release, the request is accepted at once and the download opens. Otherwise the request waits for the seller.
+5. The seller sees the amount expected, the Transaction ID, the screenshot and which checks passed. The seller can accept, or press **Payment not received**, which removes the buyer's access to the file.
 
 Safety rules in the database:
 
-- A Transaction ID can be used only once.
+- A Transaction ID can be used only once, and the same screenshot cannot be used twice (the browser calculates an image fingerprint and the database rejects a duplicate).
+- Sellers can turn automatic release off in their Profile and approve every payment themselves.
 - Payment requests are created through a database function (`submit_payment_request`) that checks the listing, the price, the seller's account and the screenshot on the server side. A buyer cannot accept their own request.
 - Payment screenshots are stored in a private bucket. Only the buyer and the seller of that listing can open them.
 
@@ -146,6 +157,23 @@ Safety rules in the database:
 - Email notifications
 - Replace the uploaded file of an existing listing
 
+## Module 4: testing, security and deployment (completed)
+
+- **Test report:** [`TESTING.md`](TESTING.md) lists 30 test cases for accounts, listings, search, payments, safety and mobile, with the result of each test.
+- **Security check:** no secret keys are stored in the repository (only the public publishable key is used in the browser), Row Level Security is enabled on every table, storage buckets for full files and payment screenshots are private, and private tables return no data without login.
+- **Performance:** database requests run in parallel, the navigation bar renders at once, scripts and fonts no longer block the page, large libraries load only when needed, and new preview images are smaller. In a simulated test with a 250 ms server delay, the home page showed listings in 332 ms instead of 584 ms.
+- **Deployment:** the site is live on GitHub Pages and updates with every push to the main branch.
+
+## Notes for reviewers
+
+- The free Supabase plan pauses a project after a week without activity. If the site shows no data, the project needs to be restored from the Supabase dashboard.
+- Demo accounts for testing the full flow:
+
+| Role | Email | Password |
+|---|---|---|
+| Seller (has a payment account and a PDF listing) | DEMO-SELLER-EMAIL | DEMO-PASSWORD |
+| Buyer | DEMO-BUYER-EMAIL | DEMO-PASSWORD |
+
 ## Project structure
 
 ```
@@ -180,9 +208,10 @@ campusmarket/
     admin.js
   database/
     schema.sql             tables, validation rules, storage, triggers and security policies
-  images/
+  images/                  architecture diagram
   screenshots/             screenshots used in this README
   README.md
+  TESTING.md               test report
 ```
 
 ## Run locally
@@ -212,7 +241,7 @@ campusmarket/
 
 ### Module 2
 
-<!-- Remove these comment markers once all these files are in the screenshots folder.
+ Remove these comment markers once all these files are in the screenshots folder.
 
 #### Home page with live listings
 ![Home listings](screenshots/home-listings.png)
@@ -235,11 +264,11 @@ campusmarket/
 #### Storage buckets in Supabase
 ![Supabase storage](screenshots/supabase-storage.png)
 
--->
+
 
 ### Module 3
 
-<!-- Remove these comment markers once all these files are in the screenshots folder.
+Remove these comment markers once all these files are in the screenshots folder.
 
 #### Home page with hero, chips and listings
 ![Home hero](screenshots/home-hero.png)
@@ -268,4 +297,3 @@ campusmarket/
 #### Edit listing
 ![Edit listing](screenshots/edit-listing.png)
 
--->
